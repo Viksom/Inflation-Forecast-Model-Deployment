@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: inflacao-pt-backend
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.5
+      - key: ALLOWED_ORIGIN_REGEX
+        value: http://(localhost|127\.0\.0\.1):\d+|https://.*\.netlify\.app

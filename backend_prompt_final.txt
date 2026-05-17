@@ -1,0 +1,238 @@
+
+You are implementing the backend for a macroeconomic inflation forecasting platform focused on Portugal. The frontend is already built in Next.js 14 with TypeScript. Replace the existing mock data with real backend logic while preserving the exact frontend API contract.
+
+---
+
+## CORE PRINCIPLE
+
+This is a dataset-driven system, not a theory-driven system.
+
+All variables MUST come from:
+- app/data/raw/inflation.csv
+- config/feature_map.json
+
+No inferred, synthetic, or theory-driven variables are allowed.
+
+If a variable does not exist explicitly, the system MUST fail at startup.
+
+---
+
+## TECH STACK
+
+- Python 3.11+
+- FastAPI (mandatory)
+- Uvicorn ASGI server
+- Pydantic v2
+- pandas, numpy
+- scikit-learn, statsmodels
+- lightgbm
+
+---
+
+## PROJECT RULES
+
+Do NOT redesign existing structure.
+
+You may add:
+- routers/
+- services/
+- schemas/
+- utils/
+- loaders/
+- exceptions/
+
+---
+
+## CRITICAL BOOT RULE
+
+FinalPipeline.py MUST be imported BEFORE loading any ML model pickle.
+
+Models must be loaded once at startup using FastAPI lifespan.
+
+---
+
+## DATA SOURCE
+
+app/data/raw/inflation.csv
+
+Rules:
+- immutable
+- loaded once at startup
+- stored in memory
+
+---
+
+## FEATURE RULES
+
+All feature names MUST:
+- exist in inflation.csv OR
+- be derived via explicit lag rules OR
+- exist in feature_map.json
+
+FORBIDDEN:
+- synthetic variables
+- theoretical macro constructs not in dataset
+- renamed proxies not explicitly defined
+
+Startup MUST validate all feature references.
+
+---
+
+## LAG RULES
+
+Example:
+HICPOV_PT_ea-md_lag_12
+
+Rules:
+- lag must always be preserved in outputs
+- frontend must receive human-readable labels:
+  "HICP Total (lag 12)"
+- never collapse lagged vs non-lagged variables
+
+---
+
+## FEATURE MAPPING
+
+feature_map.json is the single source of truth for human-readable names.
+
+Only one translation function must exist and be used globally.
+
+---
+
+## HORIZON MAPPING
+
+HORIZON_MAP = {"1M": 1, "3M": 3, "12M": 12}
+
+---
+
+## FUTURE DATA (CRITICAL)
+
+Future data is exogenous assumptions, not predictions.
+
+### TIME RULE
+
+All future_data MUST:
+- be pandas DataFrame
+- use DateTimeIndex
+- start EXACTLY at 2025-11-01
+- frequency: MS (month start)
+
+### TARGET RULE
+
+inflation_target MUST:
+- exist in all future rows
+- be set to 0.0
+- never be used as predictor
+- never be forecasted
+
+---
+
+## SCENARIO SYSTEM
+
+Scenarios apply additive shocks ONLY.
+
+Loaded from:
+config/scenario_presets.json
+
+Example:
+PPIPT_ppi + 8.0
+
+NOT:
+- multipliers
+- percentages
+- replacements
+
+---
+
+## SCENARIO OVERRIDE MAP
+
+Frontend uses abstract keys only:
+
+SCENARIO_OVERRIDE_MAP = {
+    "hicp": "HICPOV_PT_ea-md",
+    "core_inflation": "MUST_EXIST_AND_BE_VALIDATED_AT_STARTUP",
+    "ppi": "PPIPT_ppi",
+    "epu": "epu_pt_epu",
+    "consumer_confidence": "CCI_PT_ea-md"
+}
+
+At startup:
+- validate all values exist in feature_map.json
+- if missing → raise error immediately
+
+---
+
+## ML MODEL INTERFACE
+
+Models expose:
+- predict()
+- forecast()
+- explainability_
+
+Do NOT modify interface.
+
+---
+
+## CONFIDENCE INTERVALS
+
+Only ML models:
+
+upper = prediction + MAE  
+lower = prediction - MAE
+
+No probabilistic or dynamic intervals.
+
+---
+
+## FEATURE IMPORTANCE
+
+- use explainability_ only
+- never recompute
+- always translate names
+- preserve lag semantics
+
+---
+
+## ACF
+
+Use statsmodels.tsa.stattools.acf
+
+Only historical data:
+- exclude future region
+- exclude null padded values
+
+---
+
+## RESPONSE RULES
+
+All outputs MUST be JSON-safe:
+- NaN → null
+- pandas Timestamp → YYYY-MM
+- numpy → python native
+
+Never return pandas or numpy objects.
+
+---
+
+## ERROR HANDLING
+
+{ "detail": "message" }
+
+- 404 model not found
+- 422 invalid variable or scenario constraint
+- 500 internal error
+
+---
+
+## FINAL CHECKLIST
+
+- [ ] inflation.csv immutable
+- [ ] no synthetic variables exist
+- [ ] future_data starts at 2025-11-01
+- [ ] inflation_target exists and is zeroed
+- [ ] SCENARIO_OVERRIDE_MAP validated at startup
+- [ ] feature_map.json is single source of truth for names
+- [ ] lag semantics preserved
+- [ ] only ML models have confidence intervals
+- [ ] ARIMA/VAR reject scenario requests
+- [ ] no pandas/numpy in responses

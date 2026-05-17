@@ -1,0 +1,297 @@
+You are a senior frontend engineer and elite UI/UX designer specialized in quantitative finance, macroeconomic dashboards, and institutional-grade analytics platforms.
+Build a complete, production-grade, frontend-only V1 web application for a macroeconomic inflation forecasting platform focused on Portugal.
+
+CONSTRAINTS
+
+Frontend only. No backend, no auth, no database, no real API calls.
+All data is mock/static, defined in /src/lib/mock-data.ts with proper TypeScript types.
+No retraining functionality.
+The application must feel like a real platform used by economists, analysts, or central banks.
+
+
+TECH STACK
+
+Next.js 14+ using the App Router (/app directory)
+React 18 + TypeScript (strict mode)
+Tailwind CSS
+shadcn/ui (use Card, Badge, Tabs, Slider, Select, Tooltip, Skeleton, Table components)
+Recharts for all charts
+Lucide React for icons
+Zustand for global state (selected model, forecast horizon, active scenario)
+
+
+PROJECT STRUCTURE
+/src
+  /app
+    /dashboard        → Page 1
+    /models           → Page 2
+    /scenario         → Page 3
+    /variables        → Page 4
+    layout.tsx        → Root layout with navbar
+    page.tsx          → Redirect to /dashboard
+  /components
+    /charts           → Reusable chart components
+    /ui               → shadcn/ui overrides + custom primitives
+    /layout           → Navbar, Sidebar, PageHeader
+    /cards            → MetricCard, ModelCard, DriverCard
+    /tables           → ModelPerformanceTable, VariableTable
+    /scenario         → ScenarioPresetCard, VariableSlider
+  /lib
+    mock-data.ts      → All mock data with TypeScript types
+    store.ts          → Zustand store
+    utils.ts          → Formatting helpers (%, numbers, dates)
+  /types
+    index.ts          → Shared TypeScript interfaces
+
+DESIGN SYSTEM
+Feel: Institutional. Bloomberg meets ECB meets Stripe. Minimal, elegant, analytical. Not a startup, not a student project.
+Theme: Light only (add a dark mode toggle in the navbar — wired to Tailwind dark class — but default to light).
+Colors (Tailwind custom tokens or direct classes):
+
+Background: slate-50 / gray-50
+Surface: white with shadow-sm border border-slate-100
+Primary: slate-900 / indigo-900
+Accent: indigo-600
+Positive: emerald-600 (muted green)
+Negative: rose-600 (muted red)
+Neutral text: slate-500
+Chart palette: ['#3730a3','#0e7490','#059669','#b45309','#be185d'] (muted, institutional)
+
+Typography: Import Inter via next/font/google. Use font-medium for labels, font-semibold for values, font-light for captions.
+Spacing: Consistent p-6 for cards, gap-4 / gap-6 for grids. Generous whitespace.
+Interactions: Subtle hover (hover:shadow-md transition-shadow), smooth chart transitions (Recharts isAnimationActive), loading skeletons via shadcn Skeleton.
+Accessibility: Add aria-label to all icon buttons. Keyboard-navigable tabs and selects.
+
+GLOBAL STATE (Zustand store)
+typescriptinterface AppStore {
+  selectedModel: 'ARIMA' | 'VAR' | 'Ridge' | 'LightGBM'
+  forecastHorizon: '1M' | '3M' | '12M'
+  activeScenario: 'Baseline' | 'Optimistic' | 'Pessimistic' | 'Energy Shock' | 'Monetary Tightening'
+  scenarioVariables: ScenarioVariables
+  setModel: (model) => void
+  setHorizon: (horizon) => void
+  setScenario: (scenario) => void
+  setScenarioVariable: (key, value) => void
+  resetScenario: () => void
+}
+The navbar model selector and horizon selector write to this store. All pages read from it reactively.
+
+MOCK DATA STRUCTURE
+Define all types in /src/types/index.ts and all data in /src/lib/mock-data.ts.
+Required mock datasets:
+typescript// Monthly inflation time series — 2018 to present
+type InflationDataPoint = {
+  date: string          // 'YYYY-MM'
+  actual: number        // e.g. 2.3 (%)
+  arima: number
+  var: number
+  ridge: number
+  lgbm: number
+  confidenceLow: number
+  confidenceHigh: number
+}
+
+// Model performance metrics
+type ModelMetrics = {
+  model: 'ARIMA' | 'VAR' | 'Ridge' | 'LightGBM'
+  rmse: number
+  mae: number
+  rrmse: number
+  rmae: number
+  category: 'Classical' | 'Machine Learning'
+  scenarioCompatible: 'Yes' | 'Partial' | 'No'
+}
+
+// Feature importance for ML models
+type FeatureImportance = {
+  variable: string
+  importance: number    // -1 to 1, signed for direction
+  model: 'Ridge' | 'LightGBM'
+}
+
+// Scenario variable controls
+type ScenarioVariables = {
+  hicp: number           // default 0 (delta %)
+  coreInflation: number
+  ppi: number
+  epu: number
+  consumerConfidence: number
+}
+
+// Variable explorer time series
+type MacroVariable = {
+  name: string
+  series: { date: string; value: number }[]
+  unit: string
+  source: string
+}
+Generate realistic, coherent mock values. Portugal's inflation peaked ~10% in 2022, returned toward ~2-3% by 2024. Reflect this in the data.
+
+NAVBAR
+Fixed top navbar. Contains:
+
+Left: logo mark + "InflaçãoPT" or "MacroLens PT" (pick the most institutional-sounding)
+Center: navigation links — Dashboard · Models · Scenario Analysis · Variables
+Right: Horizon selector (1M / 3M / 12M segmented control) + Model selector (dropdown) + Dark mode toggle
+
+Active nav link has border-b-2 border-indigo-600.
+
+PAGE 1 — DASHBOARD
+Layout: Full-width, max-w-screen-2xl mx-auto px-8 py-6.
+Top row — 4 KPI cards (grid-cols-4):
+
+Current Inflation Forecast — large number, trend arrow, MoM change
+Best Performing Model — model name badge, RMSE value
+Forecast Change — delta vs previous period, colored by direction
+Forecast Confidence — percentage or interval width, subtle progress bar
+
+Main chart (full width):
+Recharts ComposedChart with:
+
+Area for confidence interval (light indigo fill, no stroke)
+Line for actual historical (slate-700, solid)
+Line for selected model forecast (indigo-600, dashed after last actual)
+Vertical reference line at "today"
+Custom Tooltip showing all values + date
+Legend using custom render
+CartesianGrid strokeDasharray="3 3" in slate-200
+
+Bottom row (grid-cols-2):
+Left: Model Performance Table
+
+shadcn Table with columns: Model | RMSE | MAE | RRMSE | RMAE | Category
+Best row highlighted with bg-indigo-50 font-semibold
+Category shown as Badge (variant="outline")
+
+Right: Macroeconomic Drivers Panel
+
+Horizontal bar chart or ranked list
+Variables sorted by absolute importance
+Positive bars in emerald-500, negative in rose-500
+Labels on left, bars on right
+Only available when selected model is Ridge or LightGBM; show a subtle notice for ARIMA/VAR
+
+
+PAGE 2 — MODELS
+Header: Page title + brief methodological description (1-2 sentences per model).
+Model cards row (grid-cols-4):
+Each card shows:
+
+Model name + category badge (Classical / Machine Learning)
+Scenario badge: Yes / Partial / No (color coded)
+RMSE + MAE
+Sparkline of forecast vs actual (mini Recharts LineChart)
+"View Details" button (accordion or modal — use accordion)
+
+Forecast Overlay Chart:
+Recharts LineChart showing all 4 model forecasts + actual on same chart.
+Toggle visibility per model via checkboxes above chart.
+Error Comparison Chart:
+GroupedBarChart — RMSE and MAE side by side per model.
+Residual Analysis:
+For each model: scatter plot of residuals vs fitted values. Small, grid of 4 charts (grid-cols-2).
+
+PAGE 3 — SCENARIO ANALYSIS
+CRITICAL BEHAVIOR:
+
+If selected model is ARIMA or VAR: show a full-width institutional notice card (shadcn Alert with AlertTriangle icon):
+
+"Scenario analysis is not available for autoregressive classical models (ARIMA, VAR). These models extrapolate from historical patterns and do not expose structural variable inputs. Please select Ridge or LightGBM to activate interactive scenario simulation."
+
+
+If selected model is Ridge or LightGBM: show the full scenario analysis interface.
+
+Layout (ML models only): two-column — left panel 320px fixed, right main area flex-1
+Left panel:
+Scenario presets (stacked cards, selectable):
+
+Baseline — "Historical trends continue"
+Optimistic — "Easing energy prices, strong demand"
+Pessimistic — "Persistent supply shocks, weak confidence"
+Energy Shock — "Oil price surge +40%, PPI spike"
+Monetary Tightening — "ECB rate hike cycle, credit contraction"
+
+Each preset, when selected, sets scenarioVariables in the Zustand store to preset values.
+Below presets: Variable controls (sliders + number inputs):
+
+HICP Delta (%) — range -5 to +5
+Core Inflation Delta — range -3 to +3
+PPI Delta — range -10 to +10
+EPU Index Delta — range -50 to +50
+Consumer Confidence Delta — range -20 to +20
+Reset button (Lucide RotateCcw icon)
+
+Sliders should use shadcn Slider. On change, set scenario to "Custom".
+Main area:
+
+Forecast chart: Baseline (dashed slate) vs Scenario (solid indigo) with confidence bands
+Delta metrics row: 3 cards — Forecast Delta (%), Peak Inflation Date, Scenario vs Baseline RMSE
+Drivers Impact panel: which variables are pushing inflation up/down in this scenario (horizontal bars)
+
+Transitions: use transition-all duration-300 on chart wrapper when scenario changes.
+
+PAGE 4 — VARIABLES EXPLORER
+Feel: More analytical, research-oriented. Denser information layout.
+Left sidebar (240px): Variable selector list — clicking selects a variable.
+Variables:
+
+HICP Total
+HICP ex. Energy
+HICP ex. Energy & Food
+Producer Price Index
+Economic Policy Uncertainty
+Consumer Confidence
+PCEPI
+Exports of Goods & Services
+
+Main area tabs (shadcn Tabs):
+Tab 1 — Time Series:
+
+Full historical line chart
+Toggle: show/hide 3M and 12M rolling averages (computed from mock data)
+Source + unit label below chart
+
+Tab 2 — Lag Analysis:
+
+Bar chart showing correlation of variable with inflation at lags 1 to 12 months
+Highlight bars where |correlation| > 0.5 in indigo
+
+Tab 3 — Correlations:
+
+Heatmap-style correlation matrix (can be built with Recharts or a styled HTML table with color-coded cells)
+Color scale: negative = rose, zero = white, positive = indigo
+
+
+CHART STANDARDS (apply to every chart)
+typescript// Standard chart config to reuse
+const chartConfig = {
+  margin: { top: 10, right: 20, bottom: 20, left: 10 },
+  grid: { strokeDasharray: '3 3', stroke: '#e2e8f0' },  // slate-200
+  axisStyle: { fontSize: 11, fill: '#94a3b8' },          // slate-400
+  tooltipStyle: {
+    backgroundColor: 'white',
+    border: '1px solid #e2e8f0',
+    borderRadius: '8px',
+    fontSize: 12
+  }
+}
+All charts must have ResponsiveContainer width="100%" height={...}.
+
+LOADING STATES
+Every page section that would "load data" must have a skeleton state. Use shadcn Skeleton. Show skeletons for 1.2 seconds on initial mount using useEffect + setTimeout, then reveal content with opacity-0 → opacity-100 transition-opacity duration-500.
+
+RESPONSIVENESS
+Desktop-first. Min supported width: 1280px. On tablet (768–1280px): collapse grid-cols-4 → grid-cols-2, hide some secondary panels. Do not optimize for mobile.
+
+FINAL CHECKLIST
+Before finishing, verify:
+
+ All 4 pages implemented and routed
+ Navbar model/horizon selectors update Zustand store and reactively affect all pages
+ Scenario page correctly gates on model type
+ All charts use consistent styling
+ All mock data is typed in TypeScript
+ No any types
+ Loading skeletons on all sections
+ Dark mode toggle wired (even if design is light-first)
+ Code is modular — no page file exceeds ~200 lines
