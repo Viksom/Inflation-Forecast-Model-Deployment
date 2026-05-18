@@ -27,7 +27,7 @@ VARIABLE_METADATA = {
     "HICPNG_PT_ea-md": {"unit": "%", "source": "Eurostat"},
     "HICPNEF_PT_ea-md": {"unit": "%", "source": "Eurostat"},
     "PPIPT_ppi": {"unit": "Index", "source": "Banco de Portugal"},
-    "epu_pt_epu": {"unit": "Index", "source": "EPU Global"},
+    "epu_pt_epu": {"unit": "Index", "source": "EPU Portugal"},
     "CCI_PT_ea-md": {"unit": "Index", "source": "INE"},
     "PCEPI_fred-md": {"unit": "Index", "source": "FRED"},
     "EXPGS_PT_ea-qd": {"unit": "Index", "source": "Eurostat"},
