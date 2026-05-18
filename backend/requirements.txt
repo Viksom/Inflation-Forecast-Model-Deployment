@@ -1,0 +1,12 @@
+fastapi
+uvicorn[standard]
+pydantic>=2.0
+pandas
+numpy
+scikit-learn
+statsmodels
+lightgbm
+joblib
+python-dateutil
+scipy>=1.14.1
+openpyxl

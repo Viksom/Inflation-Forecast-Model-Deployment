@@ -1,0 +1,6 @@
+{
+  "ARIMA": { "mae": 0.44, "rmse": 0.59 },
+  "VAR": { "mae": 0.41, "rmse": 0.53 },
+  "Ridge": { "mae": 0.31, "rmse": 0.36 },
+  "LightGBM": { "mae": 0.51, "rmse": 0.62 }
+}

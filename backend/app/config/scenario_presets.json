@@ -1,0 +1,50 @@
+{
+  "Baseline": {
+    "description": "Historical trends continue",
+    "shocks": {}
+  },
+
+  "Optimistic": {
+    "description": "Lower inflationary pressure and stronger confidence",
+    "shocks": {
+      "HICPOV_PT_ea-md": -0.8,
+      "HICPNG_PT_ea-md": -0.3,
+      "PPIPT_ppi": -3,
+      "epu_pt_epu": -20,
+      "CCI_PT_ea-md": 12
+    }
+  },
+
+  "Pessimistic": {
+    "description": "Persistent supply shocks and weak confidence",
+    "shocks": {
+      "HICPOV_PT_ea-md": 1.2,
+      "HICPNG_PT_ea-md": 0.8,
+      "PPIPT_ppi": 4,
+      "epu_pt_epu": 35,
+      "CCI_PT_ea-md": -15
+    }
+  },
+
+  "Energy Shock": {
+    "description": "Oil and producer price shock",
+    "shocks": {
+      "PPIPT_ppi": 8,
+      "HICPOV_PT_ea-md": 1.8,
+      "HICPNG_PT_ea-md": 0.6,
+      "epu_pt_epu": 18,
+      "CCI_PT_ea-md": -10
+    }
+  },
+
+  "Monetary Tightening": {
+    "description": "Higher rates and weaker credit conditions",
+    "shocks": {
+      "HICPOV_PT_ea-md": 0.5,
+      "HICPNG_PT_ea-md": 0.3,
+      "PPIPT_ppi": 2,
+      "epu_pt_epu": 10,
+      "CCI_PT_ea-md": -8
+    }
+  }
+}
