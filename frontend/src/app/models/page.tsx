@@ -1,0 +1,200 @@
+'use client';
+
+import { useEffect, useMemo, useState } from 'react';
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Legend,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Scatter,
+  ScatterChart,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
+import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ModelCard } from '@/components/cards/ModelCard';
+import { getInflationSeries, getModelMetrics } from '@/lib/api';
+import { modelToSeriesKey } from '@/lib/utils';
+import type { InflationDataPoint, ModelKey, ModelMetrics } from '@/types';
+
+const defaultModels: ModelKey[] = ['ARIMA', 'VAR', 'Ridge', 'LightGBM'];
+
+export default function ModelsPage() {
+  const [visibleModels, setVisibleModels] = useState<ModelKey[]>(defaultModels);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [inflationSeries, setInflationSeries] = useState<InflationDataPoint[]>([]);
+  const [modelMetrics, setModelMetrics] = useState<ModelMetrics[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+
+    Promise.all([getInflationSeries('12M', 'LightGBM'), getModelMetrics()])
+      .then(([series, metrics]) => {
+        if (cancelled) return;
+        setInflationSeries(series);
+        setModelMetrics(metrics);
+      })
+      .catch((err: Error) => {
+        if (!cancelled) setError(err.message);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const toggleModel = (model: ModelKey) => {
+    setVisibleModels((current) =>
+      current.includes(model) ? current.filter((value) => value !== model) : [...current, model],
+    );
+  };
+
+  const overlayData = useMemo(
+    () => inflationSeries.map((item) => ({
+      date: item.date,
+      actual: item.actual,
+      arima: item.arima,
+      var: item.var,
+      ridge: item.ridge,
+      lgbm: item.lgbm,
+    })),
+    [inflationSeries],
+  );
+
+  const residualData = useMemo(
+    () => inflationSeries.filter((point) => point.actual !== null).map((point) => ({
+      date: point.date,
+      ARIMA: (point.actual ?? 0) - (point.arima ?? 0),
+      VAR: (point.actual ?? 0) - (point.var ?? 0),
+      Ridge: (point.actual ?? 0) - (point.ridge ?? 0),
+      LightGBM: (point.actual ?? 0) - (point.lgbm ?? 0),
+      arimaFitted: point.arima,
+      varFitted: point.var,
+      ridgeFitted: point.ridge,
+      lgbmFitted: point.lgbm,
+    })),
+    [inflationSeries],
+  );
+
+  const errorSeries = modelMetrics.map((metric) => ({
+    model: metric.model,
+    rmse: metric.rmse,
+    mae: metric.mae,
+  }));
+
+  return (
+    <section className="mx-auto max-w-screen-2xl px-8 pb-10">
+      <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+        <div>
+          <p className="text-sm uppercase tracking-[0.3em] text-slate-500">Modelos</p>
+          <h1 className="mt-2 text-3xl font-semibold text-slate-900 dark:text-slate-100">Arquiteturas e desempenho</h1>
+          <p className="mt-2 max-w-2xl text-sm text-slate-500 dark:text-slate-400">
+            Análise comparativa dos modelos de previsão, eficiência métrica e qualidade dos resíduos.
+          </p>
+        </div>
+      </div>
+
+      {error ? (
+        <div className="mb-6 rounded-3xl border border-rose-200 bg-rose-50 p-5 text-sm text-rose-800 dark:border-rose-500/30 dark:bg-rose-950 dark:text-rose-100">
+          {error}
+        </div>
+      ) : null}
+
+      <div className="grid gap-6 xl:grid-cols-4">
+        {loading ? Array.from({ length: 4 }).map((_, index) => (
+          <Card key={index} className="h-[340px]" />
+        )) : modelMetrics.map((model) => (
+          <ModelCard key={model.model} model={model} data={inflationSeries.slice(-18)} />
+        ))}
+      </div>
+
+      <Card className="mt-8">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-sm font-medium uppercase tracking-[0.2em] text-slate-500">Sobreposição de previsões</p>
+            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Selecione modelos para comparar as trajetórias de previsão e histórica.</p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            {defaultModels.map((model) => (
+              <label key={model} className="inline-flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
+                <Checkbox checked={visibleModels.includes(model)} onChange={() => toggleModel(model)} />
+                {model}
+              </label>
+            ))}
+          </div>
+        </div>
+        <div className="mt-6 h-[420px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={overlayData} margin={{ top: 24, right: 24, bottom: 18, left: 10 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              <XAxis dataKey="date" tickLine={false} axisLine={false} tick={{ fill: '#64748b', fontSize: 11 }} tickFormatter={(value) => value.slice(2)} />
+              <YAxis tickLine={false} axisLine={false} tick={{ fill: '#64748b', fontSize: 11 }} />
+              <Tooltip contentStyle={{ borderRadius: 10, borderColor: '#e2e8f0', backgroundColor: '#fff' }} formatter={(value: number) => `${value.toFixed(1)}%`} />
+              <Legend verticalAlign="top" height={40} />
+              <Line dataKey="actual" name="Histórico" stroke="#0f172a" strokeWidth={2} dot={false} />
+              {visibleModels.includes('ARIMA') && <Line dataKey="arima" name="ARIMA" stroke="#4f46e5" dot={false} />}
+              {visibleModels.includes('VAR') && <Line dataKey="var" name="VAR" stroke="#0ea5e9" dot={false} />}
+              {visibleModels.includes('Ridge') && <Line dataKey="ridge" name="Ridge" stroke="#14b8a6" dot={false} />}
+              {visibleModels.includes('LightGBM') && <Line dataKey="lgbm" name="LightGBM" stroke="#d97706" dot={false} />}
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </Card>
+
+      <div className="mt-8 grid gap-6 xl:grid-cols-2">
+        <Card>
+          <p className="text-sm font-medium uppercase tracking-[0.2em] text-slate-500">Comparação de erro</p>
+          <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">RMSE e MAE lado a lado por modelo.</p>
+          <div className="mt-6 h-[320px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={errorSeries} margin={{ top: 24, right: 24, bottom: 18, left: 10 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis dataKey="model" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11 }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11 }} />
+                <Tooltip formatter={(value: number) => value.toFixed(2)} />
+                <Legend verticalAlign="top" height={40} />
+                <Bar dataKey="rmse" name="RMSE" fill="#4338ca" radius={[8, 8, 0, 0]} />
+                <Bar dataKey="mae" name="MAE" fill="#0f766e" radius={[8, 8, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+
+        <Card>
+          <p className="text-sm font-medium uppercase tracking-[0.2em] text-slate-500">Análise de resíduos</p>
+          <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Resíduos versus valores ajustados para cada modelo.</p>
+          <div className="mt-6 grid gap-6 sm:grid-cols-2">
+            {(['ARIMA', 'VAR', 'Ridge', 'LightGBM'] as ModelKey[]).map((model) => (
+              <div key={model} className="rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900">
+                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{model}</p>
+                <div className="mt-4 h-48">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ScatterChart margin={{ top: 10, right: 10, bottom: 10, left: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                      <XAxis dataKey={`${modelToSeriesKey(model)}Fitted`} name="Ajustado" tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} />
+                      <YAxis dataKey={model} name="Resíduo" tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} />
+                      <Tooltip formatter={(value: number) => `${value.toFixed(2)}%`} cursor={{ strokeDasharray: '3 3' }} />
+                      <Scatter data={residualData} fill={model === 'LightGBM' ? '#d97706' : model === 'Ridge' ? '#14b8a6' : model === 'ARIMA' ? '#4f46e5' : '#0ea5e9'} name={model} />
+                    </ScatterChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+    </section>
+  );
+}
