@@ -11,6 +11,7 @@ from app.schemas.api import (
     LagResponse,
     MacroVariable,
     ModelMetrics,
+    ScenarioControl,
     ScenarioPreset,
     ScenarioSimulationRequest,
 )
@@ -50,6 +51,11 @@ def scenario_presets(context: Annotated[ApplicationContext, Depends(get_context)
     return json_safe(ForecastingService(context).scenario_presets())
 
 
+@router.get("/scenario-controls", response_model=list[ScenarioControl])
+def scenario_controls(context: Annotated[ApplicationContext, Depends(get_context)]):
+    return json_safe(ForecastingService(context).scenario_controls())
+
+
 @router.post("/scenarios/simulate")
 def simulate_scenario(
     payload: ScenarioSimulationRequest,
@@ -69,6 +75,11 @@ def simulate_scenario(
 @router.get("/macro-variables", response_model=list[MacroVariable])
 def macro_variables(context: Annotated[ApplicationContext, Depends(get_context)]):
     return json_safe(AnalyticsService(context).macro_variables())
+
+
+@router.get("/target-variable", response_model=MacroVariable)
+def target_variable(context: Annotated[ApplicationContext, Depends(get_context)]):
+    return json_safe(AnalyticsService(context).target_variable())
 
 
 @router.get("/correlation-matrix", response_model=CorrelationMatrix)

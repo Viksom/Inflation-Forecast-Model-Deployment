@@ -7,6 +7,7 @@ import type {
   ModelKey,
   ModelMetrics,
   ScenarioPreset,
+  ScenarioControl,
   ScenarioSimulation,
   ScenarioVariables,
 } from '@/types';
@@ -16,6 +17,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://127.0.0.1:8
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
+    cache: 'no-store',
     headers: {
       'Content-Type': 'application/json',
       ...init?.headers,
@@ -48,6 +50,10 @@ export function getScenarioPresets() {
   return request<ScenarioPreset[]>('/api/scenario-presets');
 }
 
+export function getScenarioControls() {
+  return request<ScenarioControl[]>('/api/scenario-controls');
+}
+
 export function simulateScenario(
   model: ModelKey,
   horizon: '1M' | '3M' | '12M',
@@ -62,6 +68,10 @@ export function simulateScenario(
 
 export function getMacroVariables() {
   return request<MacroVariable[]>('/api/macro-variables');
+}
+
+export function getTargetVariable() {
+  return request<MacroVariable>('/api/target-variable');
 }
 
 export function getCorrelationMatrix() {

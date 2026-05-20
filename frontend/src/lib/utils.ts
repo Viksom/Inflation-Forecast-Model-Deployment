@@ -43,8 +43,8 @@ export function getTodayLabel(series: InflationDataPoint[]) {
   return series[series.length - 1]?.date ?? '';
 }
 
-export function modelToSeriesKey(model: ModelKey): 'arima' | 'var' | 'ridge' | 'lgbm' {
-  if (model === 'VAR') return 'var';
+export function modelToSeriesKey(model: ModelKey): 'arima' | 'ccvar' | 'ridge' | 'lgbm' {
+  if (model === 'CC-VAR') return 'ccvar';
   if (model === 'LightGBM') return 'lgbm';
   return model.toLowerCase() as 'arima' | 'ridge';
 }

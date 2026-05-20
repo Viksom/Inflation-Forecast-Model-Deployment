@@ -6,6 +6,7 @@ import pandas as pd
 from fastapi import HTTPException
 from statsmodels.tsa.stattools import acf
 
+from app.core.settings import TARGET_COL
 from app.services.context import ApplicationContext
 from app.utils.features import translate_feature
 from app.utils.json import finite_float
@@ -32,6 +33,8 @@ VARIABLE_METADATA = {
     "PCEPI_fred-md": {"unit": "Index", "source": "FRED"},
     "EXPGS_PT_ea-qd": {"unit": "Index", "source": "Eurostat"},
 }
+
+TARGET_METADATA = {"unit": "%", "source": "Inflation Target"}
 
 CORRELATION_KEYS = [
     "HICPOV_PT_ea-md",
@@ -63,6 +66,18 @@ class AnalyticsService:
                 }
             )
         return variables
+
+    def target_variable(self) -> dict[str, Any]:
+        series = self._filled_series(TARGET_COL)
+        return {
+            "name": translate_feature(TARGET_COL, self.context.feature_map),
+            "series": [
+                {"date": index.strftime("%Y-%m"), "value": finite_float(value)}
+                for index, value in series.items()
+            ],
+            "unit": TARGET_METADATA["unit"],
+            "source": TARGET_METADATA["source"],
+        }
 
     def correlation_matrix(self) -> dict[str, Any]:
         frame = pd.DataFrame({key: self._filled_series(key) for key in CORRELATION_KEYS})

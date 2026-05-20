@@ -13,7 +13,7 @@ const navItems = [
   { label: 'Variables', href: '/variables' },
 ];
 
-const modelOptions: ModelKey[] = ['ARIMA', 'VAR', 'Ridge', 'LightGBM'];
+const modelOptions: ModelKey[] = ['ARIMA', 'CC-VAR', 'Ridge', 'LightGBM'];
 const horizonOptions = ['1M', '3M', '12M'] as const;
 
 export function Navbar() {

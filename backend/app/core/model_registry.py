@@ -4,8 +4,8 @@ MODEL_REGISTRY = {
         "type": "classical"
     },
 
-    "VAR": {
-        "path": "models/classical/VAR_Model_Teoricas.pkl",
+    "CC-VAR": {
+        "path": "models/classical/CCVAR_BestModel.pkl",
         "type": "classical"
     },
 

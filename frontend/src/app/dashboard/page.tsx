@@ -22,6 +22,8 @@ import { getFeatureImportance, getInflationSeries, getModelMetrics } from '@/lib
 import { formatPercent, formatMonth, modelToSeriesKey } from '@/lib/utils';
 import type { FeatureImportance, InflationDataPoint, ModelMetrics } from '@/types';
 
+const DASHBOARD_REFERENCE_DATE = '2025-10';
+
 function ForecastTooltip({ active, payload, label }: { active?: boolean; payload?: any; label?: string }) {
   if (!active || !payload || payload.length === 0) {
     return null;
@@ -105,6 +107,7 @@ export default function DashboardPage() {
     () => featureImportance.filter((item) => item.model === selectedModel).sort((a, b) => Math.abs(b.importance) - Math.abs(a.importance)),
     [featureImportance, selectedModel],
   );
+  const hasReferenceDate = useMemo(() => modelData.some((point) => point.date === DASHBOARD_REFERENCE_DATE), [modelData]);
 
   return (
     <section className="mx-auto max-w-screen-2xl px-8 pb-10">
@@ -172,7 +175,7 @@ export default function DashboardPage() {
           <ResponsiveContainer width="100%" height={460}>
             <ComposedChart data={modelData} margin={{ top: 24, right: 24, bottom: 18, left: 10 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11 }} tickFormatter={(value) => value.slice(2)} />
+              <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11 }} tickFormatter={formatMonth} />
               <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11 }} />
               <Tooltip content={<ForecastTooltip />} />
               <Legend verticalAlign="top" align="right" height={40} />
@@ -180,7 +183,7 @@ export default function DashboardPage() {
               <Area type="monotone" dataKey="low" name="Interval inferior" stroke="transparent" fill="rgba(59, 130, 246, 0.0)" activeDot={false} />
               <Line type="monotone" dataKey="actual" name="Histórico" stroke="#0f172a" strokeWidth={2} dot={false} />
               <Line type="monotone" dataKey="selected" name={`${modelName} Forecast`} stroke="#4f46e5" strokeWidth={3} dot={false} strokeDasharray="5 5" />
-              {inflationSeries.length >= 12 ? <ReferenceLine x={inflationSeries[inflationSeries.length - 12].date} stroke="#64748b" strokeDasharray="3 3" label="Treino" /> : null}
+              {hasReferenceDate ? <ReferenceLine x={DASHBOARD_REFERENCE_DATE} stroke="#64748b" strokeDasharray="3 3" label="Treino" /> : null}
             </ComposedChart>
           </ResponsiveContainer>
         )}
@@ -255,7 +258,7 @@ export default function DashboardPage() {
             </div>
           ) : (
             <div className="mt-6 rounded-3xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-950 dark:text-amber-100">
-              A análise de drivers não está disponível para modelos ARIMA ou VAR. Selecione Ridge ou LightGBM para visualizar importância e sensibilidades das variáveis.
+              A análise de drivers não está disponível para modelos ARIMA ou CC-VAR. Selecione Ridge ou LightGBM para visualizar importância e sensibilidades das variáveis.
             </div>
           )}
         </Card>

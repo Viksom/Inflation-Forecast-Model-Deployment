@@ -18,14 +18,15 @@ import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Slider } from '@/components/ui/slider';
 import { useAppStore } from '@/lib/store';
-import { getScenarioPresets, simulateScenario } from '@/lib/api';
+import { getScenarioControls, getScenarioPresets, simulateScenario } from '@/lib/api';
 import { formatDecimal, formatPercent, formatMonth } from '@/lib/utils';
-import type { ScenarioPreset, ScenarioSimulation } from '@/types';
+import type { ScenarioControl, ScenarioPreset, ScenarioSimulation } from '@/types';
 
 export default function ScenarioPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [scenarioPresets, setScenarioPresets] = useState<ScenarioPreset[]>([]);
+  const [scenarioControls, setScenarioControls] = useState<ScenarioControl[]>([]);
   const [scenarioResult, setScenarioResult] = useState<ScenarioSimulation | null>(null);
   const selectedModel = useAppStore((state) => state.selectedModel);
   const forecastHorizon = useAppStore((state) => state.forecastHorizon);
@@ -37,9 +38,11 @@ export default function ScenarioPage() {
 
   useEffect(() => {
     let cancelled = false;
-    getScenarioPresets()
-      .then((presets) => {
-        if (!cancelled) setScenarioPresets(presets);
+    Promise.all([getScenarioPresets(), getScenarioControls()])
+      .then(([presets, controls]) => {
+        if (cancelled) return;
+        setScenarioPresets(presets);
+        setScenarioControls(controls);
       })
       .catch((err: Error) => {
         if (!cancelled) setError(err.message);
@@ -50,7 +53,7 @@ export default function ScenarioPage() {
   }, []);
 
   useEffect(() => {
-    if (selectedModel === 'ARIMA' || selectedModel === 'VAR') {
+    if (selectedModel === 'ARIMA' || selectedModel === 'CC-VAR') {
       setLoading(false);
       setScenarioResult(null);
       return;
@@ -104,12 +107,12 @@ export default function ScenarioPage() {
         </div>
       ) : null}
 
-      {selectedModel === 'ARIMA' || selectedModel === 'VAR' ? (
+      {selectedModel === 'ARIMA' || selectedModel === 'CC-VAR' ? (
         <Alert variant="warning">
           <div className="flex flex-col gap-3">
             <div className="text-base font-semibold">Cenário não disponível para modelos clássicos</div>
             <p className="text-sm text-slate-700 dark:text-slate-300">
-              A análise de cenários não está disponível para modelos autoregressivos clássicos (ARIMA, VAR). Estes modelos extrapolam padrões históricos e não expõem entradas estruturais. Selecione Ridge ou LightGBM para simular cenários interactivos.
+              A análise de cenários não está disponível para modelos autoregressivos clássicos (ARIMA, CC-VAR). Estes modelos extrapolam padrões históricos e não expõem entradas estruturais. Selecione Ridge ou LightGBM para simular cenários interactivos.
             </p>
           </div>
         </Alert>
@@ -147,41 +150,21 @@ export default function ScenarioPage() {
               </div>
 
               <div className="space-y-6">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm font-medium text-slate-700 dark:text-slate-200">
-                    <span>HICP Delta (%)</span>
-                    <span>{scenarioVariables.hicp.toFixed(1)}</span>
+                {scenarioControls.map((control) => (
+                  <div key={control.key} className="space-y-2">
+                    <div className="flex items-center justify-between text-sm font-medium text-slate-700 dark:text-slate-200">
+                      <span>{control.label} Delta</span>
+                      <span>{scenarioVariables[control.key].toFixed(control.decimals)}</span>
+                    </div>
+                    <Slider
+                      min={control.min}
+                      max={control.max}
+                      step={control.step}
+                      value={scenarioVariables[control.key]}
+                      onChange={(event) => setScenarioVariable(control.key, Number(event.target.value))}
+                    />
                   </div>
-                  <Slider min={-5} max={5} step={0.1} value={scenarioVariables.hicp} onChange={(event) => setScenarioVariable('hicp', Number(event.target.value))} />
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm font-medium text-slate-700 dark:text-slate-200">
-                    <span>Core Inflation Delta</span>
-                    <span>{scenarioVariables.coreInflation.toFixed(1)}</span>
-                  </div>
-                  <Slider min={-3} max={3} step={0.1} value={scenarioVariables.coreInflation} onChange={(event) => setScenarioVariable('coreInflation', Number(event.target.value))} />
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm font-medium text-slate-700 dark:text-slate-200">
-                    <span>PPI Delta</span>
-                    <span>{scenarioVariables.ppi.toFixed(1)}</span>
-                  </div>
-                  <Slider min={-10} max={10} step={0.5} value={scenarioVariables.ppi} onChange={(event) => setScenarioVariable('ppi', Number(event.target.value))} />
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm font-medium text-slate-700 dark:text-slate-200">
-                    <span>EPU Index Delta</span>
-                    <span>{scenarioVariables.epu.toFixed(0)}</span>
-                  </div>
-                  <Slider min={-50} max={50} step={1} value={scenarioVariables.epu} onChange={(event) => setScenarioVariable('epu', Number(event.target.value))} />
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm font-medium text-slate-700 dark:text-slate-200">
-                    <span>Consumer Confidence Delta</span>
-                    <span>{scenarioVariables.consumerConfidence.toFixed(0)}</span>
-                  </div>
-                  <Slider min={-20} max={20} step={1} value={scenarioVariables.consumerConfidence} onChange={(event) => setScenarioVariable('consumerConfidence', Number(event.target.value))} />
-                </div>
+                ))}
               </div>
             </div>
           </div>

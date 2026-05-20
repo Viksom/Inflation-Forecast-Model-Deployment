@@ -39,7 +39,7 @@ class ArimaAdapter:
         return fitted.reindex(index)
 
 
-class VarAdapter:
+class CCVarAdapter:
     explainability_: list[dict[str, float | str]] = []
 
     def __init__(self, artifact: dict[str, Any]):
@@ -104,8 +104,8 @@ def load_models(*, raw_columns: set[str], feature_map: dict[str, str]) -> dict[s
 
         if name == "ARIMA":
             artifact = ArimaAdapter(artifact)
-        elif name == "VAR":
-            artifact = VarAdapter(artifact)
+        elif name == "CC-VAR":
+            artifact = CCVarAdapter(artifact)
         elif config["type"] == "ml":
             _validate_ml_model_features(name, artifact, raw_columns=raw_columns, feature_map=feature_map)
 

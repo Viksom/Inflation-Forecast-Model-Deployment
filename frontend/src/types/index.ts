@@ -1,10 +1,10 @@
-export type ModelKey = 'ARIMA' | 'VAR' | 'Ridge' | 'LightGBM';
+export type ModelKey = 'ARIMA' | 'CC-VAR' | 'Ridge' | 'LightGBM';
 
 export type InflationDataPoint = {
   date: string;
   actual: number;
   arima: number;
-  var: number;
+  ccvar: number;
   ridge: number;
   lgbm: number;
   confidenceLow: number;
@@ -35,6 +35,8 @@ export type ScenarioVariables = {
   consumerConfidence: number;
 };
 
+export type ScenarioVariableKey = keyof ScenarioVariables;
+
 export type AppStore = {
   selectedModel: ModelKey;
   forecastHorizon: '1M' | '3M' | '12M';
@@ -60,6 +62,15 @@ export type ScenarioPreset = {
   label: string;
   description: string;
   values: ScenarioVariables;
+};
+
+export type ScenarioControl = {
+  key: ScenarioVariableKey;
+  label: string;
+  min: number;
+  max: number;
+  step: number;
+  decimals: number;
 };
 
 export type SeriesPoint = { date: string; value: number | null };

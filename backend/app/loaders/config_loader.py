@@ -74,7 +74,7 @@ def validate_configs(
                 require_label=True,
             )
 
-    expected_models = {"ARIMA", "VAR", "Ridge", "LightGBM"}
+    expected_models = {"ARIMA", "CC-VAR", "Ridge", "LightGBM"}
     missing_metrics = expected_models.difference(model_metrics)
     if missing_metrics:
         raise ValueError(f"model_metrics.json is missing models: {sorted(missing_metrics)}")

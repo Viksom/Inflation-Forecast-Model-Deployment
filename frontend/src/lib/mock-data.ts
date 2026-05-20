@@ -55,7 +55,7 @@ export const inflationSeries: InflationDataPoint[] = dateSeries.map((date, index
     date,
     actual,
     arima,
-    var: variable,
+    ccvar: variable,
     ridge,
     lgbm,
     confidenceLow: Number(Math.max(0, actual - range).toFixed(1)),
@@ -65,7 +65,7 @@ export const inflationSeries: InflationDataPoint[] = dateSeries.map((date, index
 
 export const modelMetrics: ModelMetrics[] = [
   { model: 'ARIMA', rmse: 0.92, mae: 0.74, rrmse: 0.56, rmae: 0.48, category: 'Classical', scenarioCompatible: 'No' },
-  { model: 'VAR', rmse: 0.85, mae: 0.69, rrmse: 0.52, rmae: 0.45, category: 'Classical', scenarioCompatible: 'No' },
+  { model: 'CC-VAR', rmse: 0.85, mae: 0.69, rrmse: 0.52, rmae: 0.45, category: 'Classical', scenarioCompatible: 'No' },
   { model: 'Ridge', rmse: 0.36, mae: 0.31, rrmse: 0.69, rmae: 0.80, category: 'Machine Learning', scenarioCompatible: 'Partial' },
   { model: 'LightGBM', rmse: 0.61, mae: 0.50, rrmse: 0.38, rmae: 0.34, category: 'Machine Learning', scenarioCompatible: 'Yes' },
 ];

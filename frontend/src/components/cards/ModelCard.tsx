@@ -25,9 +25,6 @@ export function ModelCard({ model, data }: ModelCardProps) {
             <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{model.model}</p>
             <Badge variant={model.category === 'Classical' ? 'outline' : 'default'} className="mt-2">{model.category}</Badge>
           </div>
-          <Badge variant={model.scenarioCompatible === 'Yes' ? 'success' : model.scenarioCompatible === 'Partial' ? 'outline' : 'danger'}>
-            {model.scenarioCompatible}
-          </Badge>
         </div>
 
         <div className="mt-6 space-y-3 text-sm text-slate-500 dark:text-slate-400">

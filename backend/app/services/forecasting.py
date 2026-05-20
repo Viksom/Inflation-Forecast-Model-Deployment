@@ -12,6 +12,8 @@ from app.core.settings import (
     HORIZON_MAP,
     ML_MODELS,
     MODEL_FIELD_MAP,
+    NAIVE_BASELINE_MAE,
+    NAIVE_BASELINE_RMSE,
     SCENARIO_OVERRIDE_MAP,
     TARGET_COL,
 )
@@ -31,6 +33,22 @@ PREPARED_COLUMNS = [
     "HICPNEF_PT_ea-md",
     "CCI_PT_ea-md",
     TARGET_COL,
+]
+
+SCENARIO_FRONTEND_FIELD_MAP = {
+    "hicp": "hicp",
+    "core_inflation": "coreInflation",
+    "ppi": "ppi",
+    "epu": "epu",
+    "consumer_confidence": "consumerConfidence",
+}
+
+SCENARIO_CONTROL_SPECS = [
+    {"abstract_key": "hicp", "key": "hicp", "min": -5, "max": 5, "step": 0.1, "decimals": 1},
+    {"abstract_key": "core_inflation", "key": "coreInflation", "min": -3, "max": 3, "step": 0.1, "decimals": 1},
+    {"abstract_key": "ppi", "key": "ppi", "min": -10, "max": 10, "step": 0.5, "decimals": 1},
+    {"abstract_key": "epu", "key": "epu", "min": -50, "max": 50, "step": 1, "decimals": 0},
+    {"abstract_key": "consumer_confidence", "key": "consumerConfidence", "min": -20, "max": 20, "step": 1, "decimals": 0},
 ]
 
 
@@ -104,11 +122,6 @@ class ForecastingService:
         return records
 
     def model_metrics(self) -> list[dict[str, Any]]:
-        target = self.context.raw_data.loc["2018-01-01":, TARGET_COL].dropna()
-        scale = float(target.abs().mean()) if not target.empty else 1.0
-        if scale == 0.0:
-            scale = 1.0
-
         result: list[dict[str, Any]] = []
         for model_name, loaded in self.context.models.items():
             metrics = self.context.model_metrics[model_name]
@@ -119,8 +132,8 @@ class ForecastingService:
                     "model": model_name,
                     "rmse": float(metrics["rmse"]),
                     "mae": float(metrics["mae"]),
-                    "rrmse": float(metrics["rmse"]) / scale,
-                    "rmae": float(metrics["mae"]) / scale,
+                    "rrmse": float(metrics["rmse"]) / NAIVE_BASELINE_RMSE,
+                    "rmae": float(metrics["mae"]) / NAIVE_BASELINE_MAE,
                     "category": category,
                     "scenarioCompatible": scenario,
                 }
@@ -158,6 +171,22 @@ class ForecastingService:
             )
         return presets
 
+    def scenario_controls(self) -> list[dict[str, Any]]:
+        controls = []
+        for spec in SCENARIO_CONTROL_SPECS:
+            feature_name = SCENARIO_OVERRIDE_MAP[spec["abstract_key"]]
+            controls.append(
+                {
+                    "key": spec["key"],
+                    "label": translate_feature(feature_name, self.context.feature_map),
+                    "min": spec["min"],
+                    "max": spec["max"],
+                    "step": spec["step"],
+                    "decimals": spec["decimals"],
+                }
+            )
+        return controls
+
     def simulate_scenario(
         self,
         *,
@@ -169,7 +198,7 @@ class ForecastingService:
         if model_name not in self.context.models:
             raise HTTPException(status_code=404, detail=f"Model not found: {model_name}")
         if model_name not in ML_MODELS:
-            raise HTTPException(status_code=422, detail="ARIMA/VAR models do not support scenario requests")
+            raise HTTPException(status_code=422, detail="ARIMA/CC-VAR models do not support scenario requests")
 
         steps = self.horizon_steps(horizon)
         shocks = self._resolve_scenario_shocks(scenario_key=scenario_key, variables=variables)
@@ -220,7 +249,7 @@ class ForecastingService:
         loaded = self.context.models[model_name]
         if model_name == "ARIMA":
             return loaded.artifact.historical_predictions(self.context.raw_data.index)
-        if model_name == "VAR":
+        if model_name == "CC-VAR":
             return loaded.artifact.historical_predictions(self.context.raw_data[TARGET_COL])
 
         feature_frame = self._build_ml_feature_frame(self.context.raw_data, loaded.artifact.feature_names_)
@@ -307,34 +336,21 @@ class ForecastingService:
         }
 
     def _frontend_values_to_shocks(self, values: dict[str, float]) -> dict[str, float]:
-        field_map = {
-            "hicp": "hicp",
-            "coreInflation": "core_inflation",
-            "ppi": "ppi",
-            "epu": "epu",
-            "consumerConfidence": "consumer_confidence",
-        }
         shocks = {}
-        for frontend_key, abstract_key in field_map.items():
+        reverse_field_map = {frontend_key: abstract_key for abstract_key, frontend_key in SCENARIO_FRONTEND_FIELD_MAP.items()}
+        for frontend_key, abstract_key in reverse_field_map.items():
             feature_name = SCENARIO_OVERRIDE_MAP[abstract_key]
             shocks[feature_name] = float(values.get(frontend_key, 0.0))
         return shocks
 
     def _shocks_to_frontend_values(self, shocks: dict[str, float]) -> dict[str, float]:
         reverse_map = {feature_name: key for key, feature_name in SCENARIO_OVERRIDE_MAP.items()}
-        frontend_map = {
-            "hicp": "hicp",
-            "core_inflation": "coreInflation",
-            "ppi": "ppi",
-            "epu": "epu",
-            "consumer_confidence": "consumerConfidence",
-        }
-        values = {frontend_name: 0.0 for frontend_name in frontend_map.values()}
+        values = {frontend_name: 0.0 for frontend_name in SCENARIO_FRONTEND_FIELD_MAP.values()}
         for feature_name, shock in shocks.items():
             abstract_key = reverse_map.get(feature_name)
             if abstract_key is None:
                 continue
-            values[frontend_map[abstract_key]] = float(shock)
+            values[SCENARIO_FRONTEND_FIELD_MAP[abstract_key]] = float(shock)
         return values
 
     def _series_records(self, series: pd.Series) -> list[dict[str, float | str | None]]:

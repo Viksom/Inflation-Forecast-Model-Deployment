@@ -30,13 +30,16 @@ SCENARIO_OVERRIDE_MAP = {
 
 MODEL_FIELD_MAP = {
     "ARIMA": "arima",
-    "VAR": "var",
+    "CC-VAR": "ccvar",
     "Ridge": "ridge",
     "LightGBM": "lgbm",
 }
 
 ML_MODELS = {"Ridge", "LightGBM"}
-CLASSICAL_MODELS = {"ARIMA", "VAR"}
+CLASSICAL_MODELS = {"ARIMA", "CC-VAR"}
+
+NAIVE_BASELINE_RMSE = 0.52
+NAIVE_BASELINE_MAE = 0.39
 
 ALLOWED_ORIGINS = [
     origin.strip()

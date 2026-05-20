@@ -17,7 +17,8 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getCorrelationMatrix, getLagCorrelations, getMacroVariables } from '@/lib/api';
+import { getCorrelationMatrix, getLagCorrelations, getMacroVariables, getTargetVariable } from '@/lib/api';
+import { formatMonth } from '@/lib/utils';
 import type { CorrelationMatrix, MacroVariable } from '@/types';
 
 const rollingAverage = (series: { date: string; value: number }[], period: number) =>
@@ -27,8 +28,41 @@ const rollingAverage = (series: { date: string; value: number }[], period: numbe
     return { date: point.date, value: Number(average.toFixed(2)) };
   });
 
+const formatAxisTick = (value: number) => {
+  const absoluteValue = Math.abs(value);
+  if (absoluteValue >= 1000) {
+    return new Intl.NumberFormat('pt-PT', {
+      notation: 'compact',
+      maximumFractionDigits: 1,
+    }).format(value);
+  }
+  if (absoluteValue >= 100) {
+    return value.toLocaleString('pt-PT', { maximumFractionDigits: 0 });
+  }
+  if (absoluteValue >= 10) {
+    return value.toLocaleString('pt-PT', { maximumFractionDigits: 1 });
+  }
+  return value.toLocaleString('pt-PT', { maximumFractionDigits: 2 });
+};
+
+const getAxisDomain = (values: Array<number | null | undefined>) => {
+  const numericValues = values.filter((value): value is number => typeof value === 'number' && !Number.isNaN(value));
+  if (numericValues.length === 0) return [0, 1] as [number, number];
+
+  const min = Math.min(...numericValues);
+  const max = Math.max(...numericValues);
+  if (min === max) {
+    const padding = Math.abs(min || 1) * 0.05;
+    return [min - padding, max + padding] as [number, number];
+  }
+
+  const padding = (max - min) * 0.05;
+  return [min, max + padding] as [number, number];
+};
+
 export default function VariablesPage() {
   const [macroVariables, setMacroVariables] = useState<MacroVariable[]>([]);
+  const [targetVariable, setTargetVariable] = useState<MacroVariable | null>(null);
   const [correlationMatrix, setCorrelationMatrix] = useState<CorrelationMatrix>({ labels: [], values: [] });
   const [lagCorrelation, setLagCorrelation] = useState<{ lag: number; value: number | null }[]>([]);
   const [selectedVariable, setSelectedVariable] = useState<MacroVariable | null>(null);
@@ -42,12 +76,13 @@ export default function VariablesPage() {
     let cancelled = false;
     setLoading(true);
 
-    Promise.all([getMacroVariables(), getCorrelationMatrix()])
-      .then(([variables, matrix]) => {
+    Promise.all([getMacroVariables(), getTargetVariable(), getCorrelationMatrix()])
+      .then(([variables, target, matrix]) => {
         if (cancelled) return;
         setMacroVariables(variables);
+        setTargetVariable(target);
         setCorrelationMatrix(matrix);
-        setSelectedVariable(variables[0] ?? null);
+        setSelectedVariable((current) => current ? variables.find((variable) => variable.name === current.name) ?? variables[0] ?? null : variables[0] ?? null);
       })
       .catch((err: Error) => {
         if (!cancelled) setError(err.message);
@@ -80,6 +115,28 @@ export default function VariablesPage() {
 
   const average3m = useMemo(() => rollingAverage(selectedVariable?.series ?? [], 3), [selectedVariable]);
   const average12m = useMemo(() => rollingAverage(selectedVariable?.series ?? [], 12), [selectedVariable]);
+  const comparisonChartData = useMemo(() => {
+    if (!selectedVariable) return [];
+
+    const targetByDate = new Map((targetVariable?.series ?? []).map((point) => [point.date, point.value]));
+    return selectedVariable.series.map((point) => ({
+      date: point.date,
+      selected: point.value,
+      target: targetByDate.get(point.date) ?? null,
+    }));
+  }, [selectedVariable, targetVariable]);
+  const selectedAxisDomain = useMemo(
+    () => getAxisDomain([
+      ...comparisonChartData.map((point) => point.selected),
+      ...(show3m ? average3m.map((point) => point.value) : []),
+      ...(show12m ? average12m.map((point) => point.value) : []),
+    ]),
+    [average3m, average12m, comparisonChartData, show3m, show12m],
+  );
+  const targetAxisDomain = useMemo(
+    () => getAxisDomain(comparisonChartData.map((point) => point.target)),
+    [comparisonChartData],
+  );
 
   return (
     <section className="mx-auto max-w-screen-2xl px-8 pb-10">
@@ -123,7 +180,7 @@ export default function VariablesPage() {
           <Card>
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div>
-                <p className="text-sm font-medium uppercase tracking-[0.2em] text-slate-500">{selectedVariable?.name ?? 'Variável'}</p>
+                <p className="text-sm font-medium uppercase tracking-[0.2em] text-slate-500">{targetVariable && selectedVariable ? `Evolução da ${targetVariable.name} face a ${selectedVariable.name}` : selectedVariable?.name ?? 'Variável'}</p>
                 <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Série histórica e médias móveis.</p>
               </div>
               <div className="flex items-center gap-3">
@@ -149,14 +206,42 @@ export default function VariablesPage() {
             ) : (
               <div className="h-[460px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={selectedVariable.series} margin={{ top: 24, right: 24, bottom: 18, left: 10 }}>
+                  <LineChart data={comparisonChartData} margin={{ top: 24, right: 24, bottom: 18, left: 10 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                    <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11 }} tickFormatter={(value) => value.slice(2)} />
-                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11 }} />
+                    <XAxis
+                      dataKey="date"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: '#64748b', fontSize: 11 }}
+                      tickFormatter={formatMonth}
+                      label={{ value: 'Mês Ano', position: 'insideBottom', offset: -10, fill: '#64748b', fontSize: 12 }}
+                    />
+                    <YAxis
+                      yAxisId="selected"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: '#64748b', fontSize: 11 }}
+                      tickFormatter={formatAxisTick}
+                      domain={selectedAxisDomain}
+                      width={56}
+                      label={{ value: `${selectedVariable.name} (${selectedVariable.unit})`, angle: -90, position: 'insideLeft', fill: '#64748b', fontSize: 12 }}
+                    />
+                    <YAxis
+                      yAxisId="target"
+                      orientation="right"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: '#94a3b8', fontSize: 11 }}
+                      tickFormatter={formatAxisTick}
+                      domain={targetAxisDomain}
+                      width={56}
+                      label={{ value: `${targetVariable?.name ?? 'Target'} (${targetVariable?.unit ?? '%'})`, angle: 90, position: 'insideRight', fill: '#94a3b8', fontSize: 12 }}
+                    />
                     <Tooltip formatter={(value: number) => `${value.toFixed(2)} ${selectedVariable.unit}`} />
-                    <Line type="monotone" dataKey="value" name={selectedVariable.name} stroke="#0f172a" strokeWidth={2} dot={false} />
-                    {show3m && <Line type="monotone" data={average3m} dataKey="value" name="Média 3M" stroke="#2563eb" strokeWidth={2} dot={false} />}
-                    {show12m && <Line type="monotone" data={average12m} dataKey="value" name="Média 12M" stroke="#0ea5e9" strokeWidth={2} dot={false} />}
+                    <Line yAxisId="target" type="monotone" dataKey="target" name={targetVariable?.name ?? 'Target'} stroke="#94a3b8" strokeWidth={2} dot={false} />
+                    <Line yAxisId="selected" type="monotone" dataKey="selected" name={selectedVariable.name} stroke="#0f172a" strokeWidth={2} dot={false} />
+                    {show3m && <Line yAxisId="selected" type="monotone" data={average3m} dataKey="value" name="Média 3M" stroke="#2563eb" strokeWidth={2} dot={false} />}
+                    {show12m && <Line yAxisId="selected" type="monotone" data={average12m} dataKey="value" name="Média 12M" stroke="#0ea5e9" strokeWidth={2} dot={false} />}
                   </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -180,7 +265,7 @@ export default function VariablesPage() {
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={selectedVariable?.series ?? []} margin={{ top: 24, right: 24, bottom: 18, left: 10 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                      <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11 }} tickFormatter={(value) => value.slice(2)} />
+                      <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11 }} tickFormatter={formatMonth} />
                       <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11 }} />
                       <Tooltip formatter={(value: number) => `${value.toFixed(2)} ${selectedVariable?.unit ?? ''}`} />
                       <Area type="monotone" dataKey="value" stroke="#4338ca" fill="rgba(67, 56, 202, 0.12)" />

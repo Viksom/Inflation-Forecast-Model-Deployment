@@ -3,10 +3,11 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 
-ModelKey = Literal["ARIMA", "VAR", "Ridge", "LightGBM"]
+ModelKey = Literal["ARIMA", "CC-VAR", "Ridge", "LightGBM"]
 MlModelKey = Literal["Ridge", "LightGBM"]
 HorizonKey = Literal["1M", "3M", "12M"]
 ScenarioKey = Literal["Baseline", "Optimistic", "Pessimistic", "Energy Shock", "Monetary Tightening", "Custom"]
+ScenarioVariableKey = Literal["hicp", "coreInflation", "ppi", "epu", "consumerConfidence"]
 
 
 class ScenarioVariables(BaseModel):
@@ -32,7 +33,7 @@ class InflationDataPoint(BaseModel):
     date: str
     actual: float | None
     arima: float | None
-    var: float | None
+    ccvar: float | None
     ridge: float | None
     lgbm: float | None
     confidenceLow: float | None
@@ -60,6 +61,15 @@ class ScenarioPreset(BaseModel):
     label: str
     description: str
     values: ScenarioVariables
+
+
+class ScenarioControl(BaseModel):
+    key: ScenarioVariableKey
+    label: str
+    min: float
+    max: float
+    step: float
+    decimals: int = Field(ge=0)
 
 
 class SeriesPoint(BaseModel):

@@ -8,6 +8,7 @@ import {
   Legend,
   Line,
   LineChart,
+  ReferenceLine,
   ResponsiveContainer,
   Scatter,
   ScatterChart,
@@ -23,7 +24,8 @@ import { getInflationSeries, getModelMetrics } from '@/lib/api';
 import { modelToSeriesKey } from '@/lib/utils';
 import type { InflationDataPoint, ModelKey, ModelMetrics } from '@/types';
 
-const defaultModels: ModelKey[] = ['ARIMA', 'VAR', 'Ridge', 'LightGBM'];
+const defaultModels: ModelKey[] = ['ARIMA', 'CC-VAR', 'Ridge', 'LightGBM'];
+const MODELS_REFERENCE_DATE = '2025-10';
 
 export default function ModelsPage() {
   const [visibleModels, setVisibleModels] = useState<ModelKey[]>(defaultModels);
@@ -66,22 +68,23 @@ export default function ModelsPage() {
       date: item.date,
       actual: item.actual,
       arima: item.arima,
-      var: item.var,
+      ccvar: item.ccvar,
       ridge: item.ridge,
       lgbm: item.lgbm,
     })),
     [inflationSeries],
   );
+  const hasReferenceDate = useMemo(() => overlayData.some((point) => point.date === MODELS_REFERENCE_DATE), [overlayData]);
 
   const residualData = useMemo(
     () => inflationSeries.filter((point) => point.actual !== null).map((point) => ({
       date: point.date,
       ARIMA: (point.actual ?? 0) - (point.arima ?? 0),
-      VAR: (point.actual ?? 0) - (point.var ?? 0),
+      'CC-VAR': (point.actual ?? 0) - (point.ccvar ?? 0),
       Ridge: (point.actual ?? 0) - (point.ridge ?? 0),
       LightGBM: (point.actual ?? 0) - (point.lgbm ?? 0),
       arimaFitted: point.arima,
-      varFitted: point.var,
+      ccvarFitted: point.ccvar,
       ridgeFitted: point.ridge,
       lgbmFitted: point.lgbm,
     })),
@@ -145,9 +148,10 @@ export default function ModelsPage() {
               <Legend verticalAlign="top" height={40} />
               <Line dataKey="actual" name="Histórico" stroke="#0f172a" strokeWidth={2} dot={false} />
               {visibleModels.includes('ARIMA') && <Line dataKey="arima" name="ARIMA" stroke="#4f46e5" dot={false} />}
-              {visibleModels.includes('VAR') && <Line dataKey="var" name="VAR" stroke="#0ea5e9" dot={false} />}
+              {visibleModels.includes('CC-VAR') && <Line dataKey="ccvar" name="CC-VAR" stroke="#0ea5e9" dot={false} />}
               {visibleModels.includes('Ridge') && <Line dataKey="ridge" name="Ridge" stroke="#14b8a6" dot={false} />}
               {visibleModels.includes('LightGBM') && <Line dataKey="lgbm" name="LightGBM" stroke="#d97706" dot={false} />}
+              {hasReferenceDate ? <ReferenceLine x={MODELS_REFERENCE_DATE} stroke="#64748b" strokeDasharray="3 3" label="Treino" /> : null}
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -176,7 +180,7 @@ export default function ModelsPage() {
           <p className="text-sm font-medium uppercase tracking-[0.2em] text-slate-500">Análise de resíduos</p>
           <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Resíduos versus valores ajustados para cada modelo.</p>
           <div className="mt-6 grid gap-6 sm:grid-cols-2">
-            {(['ARIMA', 'VAR', 'Ridge', 'LightGBM'] as ModelKey[]).map((model) => (
+            {(['ARIMA', 'CC-VAR', 'Ridge', 'LightGBM'] as ModelKey[]).map((model) => (
               <div key={model} className="rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900">
                 <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{model}</p>
                 <div className="mt-4 h-48">
