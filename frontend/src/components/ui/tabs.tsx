@@ -25,7 +25,7 @@ interface TabsListProps extends HTMLAttributes<HTMLDivElement> {
 }
 
 export function TabsList({ className, children, ...props }: TabsListProps) {
-  return <div className={clsx('inline-flex rounded-full border border-base bg-slate-100 p-1 dark:bg-slate-900', className)} {...props}>{children}</div>;
+  return <div className={clsx('inline-flex max-w-full flex-wrap gap-1 rounded-2xl border border-base bg-slate-100 p-1 dark:bg-slate-900 sm:rounded-full', className)} {...props}>{children}</div>;
 }
 
 interface TabsTriggerProps {
@@ -43,6 +43,7 @@ export function TabsTrigger({ value, children }: TabsTriggerProps) {
       onClick={() => context.onValueChange(value)}
       className={clsx(
         'rounded-full px-4 py-2 text-sm font-semibold transition',
+        'whitespace-nowrap',
         active ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-white' : 'text-slate-600 hover:bg-white/80 dark:text-slate-300 dark:hover:bg-slate-800',
       )}
     >

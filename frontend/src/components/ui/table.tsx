@@ -14,9 +14,9 @@ export function TableRow({ className, ...props }: HTMLAttributes<HTMLTableRowEle
 }
 
 export function TableHead({ className, ...props }: HTMLAttributes<HTMLTableCellElement>) {
-  return <th className={clsx('px-4 py-3 font-semibold', className)} {...props} />;
+  return <th className={clsx('px-2 py-3 font-semibold sm:px-4', className)} {...props} />;
 }
 
 export function TableCell({ className, ...props }: HTMLAttributes<HTMLTableCellElement>) {
-  return <td className={clsx('px-4 py-4 align-top text-sm text-slate-700 dark:text-slate-200', className)} {...props} />;
+  return <td className={clsx('px-2 py-4 align-top text-sm text-slate-700 dark:text-slate-200 sm:px-4', className)} {...props} />;
 }

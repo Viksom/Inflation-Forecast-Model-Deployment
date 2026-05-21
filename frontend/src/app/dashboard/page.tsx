@@ -52,33 +52,45 @@ export default function DashboardPage() {
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    setError(null);
+    const load = () => {
+      setLoading(true);
+      setError(null);
 
-    const importanceRequest = selectedModel === 'Ridge' || selectedModel === 'LightGBM'
-      ? getFeatureImportance(selectedModel)
-      : Promise.resolve([]);
+      const importanceRequest = selectedModel === 'Ridge' || selectedModel === 'LightGBM'
+        ? getFeatureImportance(selectedModel)
+        : Promise.resolve([]);
 
-    Promise.all([
-      getInflationSeries(forecastHorizon, selectedModel),
-      getModelMetrics(),
-      importanceRequest,
-    ])
-      .then(([series, metrics, importance]) => {
-        if (cancelled) return;
-        setInflationSeries(series);
-        setModelMetrics(metrics);
-        setFeatureImportance(importance);
-      })
-      .catch((err: Error) => {
-        if (!cancelled) setError(err.message);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+      Promise.all([
+        getInflationSeries(forecastHorizon, selectedModel),
+        getModelMetrics(),
+        importanceRequest,
+      ])
+        .then(([series, metrics, importance]) => {
+          if (cancelled) return;
+          setInflationSeries(series);
+          setModelMetrics(metrics);
+          setFeatureImportance(importance);
+        })
+        .catch((err: Error) => {
+          if (!cancelled) setError(err.message);
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') load();
+    };
+
+    load();
+    window.addEventListener('focus', load);
+    document.addEventListener('visibilitychange', handleVisibility);
 
     return () => {
       cancelled = true;
+      window.removeEventListener('focus', load);
+      document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, [forecastHorizon, selectedModel]);
 
@@ -110,7 +122,7 @@ export default function DashboardPage() {
   const hasReferenceDate = useMemo(() => modelData.some((point) => point.date === DASHBOARD_REFERENCE_DATE), [modelData]);
 
   return (
-    <section className="mx-auto max-w-screen-2xl px-8 pb-10">
+    <section className="mx-auto max-w-screen-2xl px-4 pb-10 sm:px-6 lg:px-8">
       {error ? (
         <div className="mb-6 rounded-3xl border border-rose-200 bg-rose-50 p-5 text-sm text-rose-800 dark:border-rose-500/30 dark:bg-rose-950 dark:text-rose-100">
           {error}
@@ -125,13 +137,13 @@ export default function DashboardPage() {
             Visão consolidada do ciclo de inflação, desempenho dos modelos e confiança das previsões para os próximos meses.
           </p>
         </div>
-        <div className="rounded-3xl border border-base bg-surface p-4 shadow-sm">
+        <div className="w-full rounded-3xl border border-base bg-surface p-4 shadow-sm md:w-auto">
           <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Horizonte selecionado</p>
           <p className="mt-2 text-lg font-semibold text-slate-900 dark:text-slate-100">{forecastHorizon}</p>
         </div>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 sm:gap-6 xl:grid-cols-4">
         {loading ? (
           Array.from({ length: 4 }).map((_, index) => <Skeleton key={index} className="h-32 rounded-3xl" />)
         ) : (
@@ -168,14 +180,14 @@ export default function DashboardPage() {
         )}
       </div>
 
-      <div className="mt-8 rounded-3xl border border-base bg-surface p-6 shadow-soft">
+      <div className="mt-8 rounded-3xl border border-base bg-surface p-4 shadow-soft sm:p-6">
         {loading ? (
-          <Skeleton className="h-[460px]" />
+          <Skeleton className="h-[360px] sm:h-[460px]" />
         ) : (
-          <ResponsiveContainer width="100%" height={460}>
+          <ResponsiveContainer width="100%" height={360} className="sm:!h-[460px]">
             <ComposedChart data={modelData} margin={{ top: 24, right: 24, bottom: 18, left: 10 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11 }} tickFormatter={formatMonth} />
+              <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11 }} tickFormatter={formatMonth} minTickGap={24} />
               <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11 }} />
               <Tooltip content={<ForecastTooltip />} />
               <Legend verticalAlign="top" align="right" height={40} />
@@ -202,7 +214,7 @@ export default function DashboardPage() {
               {Array.from({ length: 4 }).map((_, index) => <Skeleton key={index} className="h-12 rounded-3xl" />)}
             </div>
           ) : (
-            <div className="mt-6 overflow-hidden rounded-3xl border border-slate-200 dark:border-slate-700">
+            <div className="mt-6 overflow-x-auto rounded-3xl border border-slate-200 dark:border-slate-700">
               <Table>
                 <TableHeader>
                   <TableRow>

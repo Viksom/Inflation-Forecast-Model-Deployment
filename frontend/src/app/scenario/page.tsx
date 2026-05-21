@@ -38,17 +38,29 @@ export default function ScenarioPage() {
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([getScenarioPresets(), getScenarioControls()])
-      .then(([presets, controls]) => {
-        if (cancelled) return;
-        setScenarioPresets(presets);
-        setScenarioControls(controls);
-      })
-      .catch((err: Error) => {
-        if (!cancelled) setError(err.message);
-      });
+    const load = () => {
+      Promise.all([getScenarioPresets(), getScenarioControls()])
+        .then(([presets, controls]) => {
+          if (cancelled) return;
+          setScenarioPresets(presets);
+          setScenarioControls(controls);
+        })
+        .catch((err: Error) => {
+          if (!cancelled) setError(err.message);
+        });
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') load();
+    };
+
+    load();
+    window.addEventListener('focus', load);
+    document.addEventListener('visibilitychange', handleVisibility);
     return () => {
       cancelled = true;
+      window.removeEventListener('focus', load);
+      document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, []);
 
@@ -92,7 +104,7 @@ export default function ScenarioPage() {
   );
 
   return (
-    <section className="mx-auto max-w-screen-2xl px-8 pb-10">
+    <section className="mx-auto max-w-screen-2xl px-4 pb-10 sm:px-6 lg:px-8">
       <div className="mb-6">
         <p className="text-sm uppercase tracking-[0.3em] text-slate-500">Análise de cenário</p>
         <h1 className="mt-2 text-3xl font-semibold text-slate-900 dark:text-slate-100">Simulação de choques macroeconómicos</h1>
@@ -140,8 +152,8 @@ export default function ScenarioPage() {
               ))}
             </div>
 
-            <div className="space-y-5 rounded-3xl border border-base bg-surface p-6 shadow-sm">
-              <div className="flex items-center justify-between gap-4">
+            <div className="space-y-5 rounded-3xl border border-base bg-surface p-4 shadow-sm sm:p-6">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-sm font-medium uppercase tracking-[0.2em] text-slate-500">Controles de cenário</p>
                   <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Ajuste os choques macroeconómicos em tempo real.</p>
@@ -152,8 +164,8 @@ export default function ScenarioPage() {
               <div className="space-y-6">
                 {scenarioControls.map((control) => (
                   <div key={control.key} className="space-y-2">
-                    <div className="flex items-center justify-between text-sm font-medium text-slate-700 dark:text-slate-200">
-                      <span>{control.label} Delta</span>
+                    <div className="flex items-center justify-between gap-3 text-sm font-medium text-slate-700 dark:text-slate-200">
+                      <span className="min-w-0 flex-1">{control.label} Delta</span>
                       <span>{scenarioVariables[control.key].toFixed(control.decimals)}</span>
                     </div>
                     <Slider
@@ -181,13 +193,13 @@ export default function ScenarioPage() {
                 </div>
               </div>
               {loading ? (
-                <Skeleton className="h-[420px]" />
+                <Skeleton className="h-[340px] sm:h-[420px]" />
               ) : (
-                <div className="h-[420px]">
+                <div className="h-[340px] sm:h-[420px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={baselineSeries} margin={{ top: 24, right: 24, bottom: 18, left: 10 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                      <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11 }} tickFormatter={(value) => value.slice(2)} />
+                      <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11 }} tickFormatter={(value) => value.slice(2)} minTickGap={24} />
                       <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11 }} />
                       <Tooltip formatter={(value: number) => `${value.toFixed(1)}%`} />
                       <Line
@@ -208,7 +220,7 @@ export default function ScenarioPage() {
               )}
             </Card>
 
-            <div className="grid gap-6 lg:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 sm:gap-6">
               <Card>
                 <p className="text-sm font-medium uppercase tracking-[0.2em] text-slate-500">Delta da previsão</p>
                 <p className="mt-4 text-3xl font-semibold text-slate-900 dark:text-slate-100">{delta >= 0 ? '+' : '-'}{formatPercent(Math.abs(delta))}</p>

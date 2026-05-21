@@ -36,24 +36,36 @@ export default function ModelsPage() {
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    setError(null);
+    const load = () => {
+      setLoading(true);
+      setError(null);
 
-    Promise.all([getInflationSeries('12M', 'LightGBM'), getModelMetrics()])
-      .then(([series, metrics]) => {
-        if (cancelled) return;
-        setInflationSeries(series);
-        setModelMetrics(metrics);
-      })
-      .catch((err: Error) => {
-        if (!cancelled) setError(err.message);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+      Promise.all([getInflationSeries('12M', 'LightGBM'), getModelMetrics()])
+        .then(([series, metrics]) => {
+          if (cancelled) return;
+          setInflationSeries(series);
+          setModelMetrics(metrics);
+        })
+        .catch((err: Error) => {
+          if (!cancelled) setError(err.message);
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') load();
+    };
+
+    load();
+    window.addEventListener('focus', load);
+    document.addEventListener('visibilitychange', handleVisibility);
 
     return () => {
       cancelled = true;
+      window.removeEventListener('focus', load);
+      document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, []);
 
@@ -98,7 +110,7 @@ export default function ModelsPage() {
   }));
 
   return (
-    <section className="mx-auto max-w-screen-2xl px-8 pb-10">
+    <section className="mx-auto max-w-screen-2xl px-4 pb-10 sm:px-6 lg:px-8">
       <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <p className="text-sm uppercase tracking-[0.3em] text-slate-500">Modelos</p>
@@ -115,7 +127,7 @@ export default function ModelsPage() {
         </div>
       ) : null}
 
-      <div className="grid gap-6 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 sm:gap-6 xl:grid-cols-4">
         {loading ? Array.from({ length: 4 }).map((_, index) => (
           <Card key={index} className="h-[340px]" />
         )) : modelMetrics.map((model) => (
@@ -131,18 +143,18 @@ export default function ModelsPage() {
           </div>
           <div className="flex flex-wrap gap-3">
             {defaultModels.map((model) => (
-              <label key={model} className="inline-flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
+              <label key={model} className="inline-flex items-center gap-2 rounded-2xl bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:bg-slate-900 dark:text-slate-200">
                 <Checkbox checked={visibleModels.includes(model)} onChange={() => toggleModel(model)} />
                 {model}
               </label>
             ))}
           </div>
         </div>
-        <div className="mt-6 h-[420px]">
+        <div className="mt-6 h-[340px] sm:h-[420px]">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={overlayData} margin={{ top: 24, right: 24, bottom: 18, left: 10 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis dataKey="date" tickLine={false} axisLine={false} tick={{ fill: '#64748b', fontSize: 11 }} tickFormatter={(value) => value.slice(2)} />
+              <XAxis dataKey="date" tickLine={false} axisLine={false} tick={{ fill: '#64748b', fontSize: 11 }} tickFormatter={(value) => value.slice(2)} minTickGap={24} />
               <YAxis tickLine={false} axisLine={false} tick={{ fill: '#64748b', fontSize: 11 }} />
               <Tooltip contentStyle={{ borderRadius: 10, borderColor: '#e2e8f0', backgroundColor: '#fff' }} formatter={(value: number) => `${value.toFixed(1)}%`} />
               <Legend verticalAlign="top" height={40} />
@@ -161,7 +173,7 @@ export default function ModelsPage() {
         <Card>
           <p className="text-sm font-medium uppercase tracking-[0.2em] text-slate-500">Comparação de erro</p>
           <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">RMSE e MAE lado a lado por modelo.</p>
-          <div className="mt-6 h-[320px]">
+          <div className="mt-6 h-[280px] sm:h-[320px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={errorSeries} margin={{ top: 24, right: 24, bottom: 18, left: 10 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -179,7 +191,7 @@ export default function ModelsPage() {
         <Card>
           <p className="text-sm font-medium uppercase tracking-[0.2em] text-slate-500">Análise de resíduos</p>
           <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Resíduos versus valores ajustados para cada modelo.</p>
-          <div className="mt-6 grid gap-6 sm:grid-cols-2">
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 sm:gap-6">
             {(['ARIMA', 'CC-VAR', 'Ridge', 'LightGBM'] as ModelKey[]).map((model) => (
               <div key={model} className="rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900">
                 <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{model}</p>

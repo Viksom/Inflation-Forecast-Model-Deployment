@@ -74,25 +74,37 @@ export default function VariablesPage() {
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
+    const load = () => {
+      setLoading(true);
 
-    Promise.all([getMacroVariables(), getTargetVariable(), getCorrelationMatrix()])
-      .then(([variables, target, matrix]) => {
-        if (cancelled) return;
-        setMacroVariables(variables);
-        setTargetVariable(target);
-        setCorrelationMatrix(matrix);
-        setSelectedVariable((current) => current ? variables.find((variable) => variable.name === current.name) ?? variables[0] ?? null : variables[0] ?? null);
-      })
-      .catch((err: Error) => {
-        if (!cancelled) setError(err.message);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+      Promise.all([getMacroVariables(), getTargetVariable(), getCorrelationMatrix()])
+        .then(([variables, target, matrix]) => {
+          if (cancelled) return;
+          setMacroVariables(variables);
+          setTargetVariable(target);
+          setCorrelationMatrix(matrix);
+          setSelectedVariable((current) => current ? variables.find((variable) => variable.name === current.name) ?? variables[0] ?? null : variables[0] ?? null);
+        })
+        .catch((err: Error) => {
+          if (!cancelled) setError(err.message);
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') load();
+    };
+
+    load();
+    window.addEventListener('focus', load);
+    document.addEventListener('visibilitychange', handleVisibility);
 
     return () => {
       cancelled = true;
+      window.removeEventListener('focus', load);
+      document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, []);
 
@@ -139,7 +151,7 @@ export default function VariablesPage() {
   );
 
   return (
-    <section className="mx-auto max-w-screen-2xl px-8 pb-10">
+    <section className="mx-auto max-w-screen-2xl px-4 pb-10 sm:px-6 lg:px-8">
       <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <p className="text-sm uppercase tracking-[0.3em] text-slate-500">Variáveis</p>
@@ -159,7 +171,7 @@ export default function VariablesPage() {
       <div className="grid gap-6 xl:grid-cols-[240px_1fr]">
         <aside className="space-y-4 rounded-3xl border border-base bg-surface p-4 shadow-soft">
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Seleção de variável</p>
-          <div className="space-y-2">
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
             {loading ? Array.from({ length: 8 }).map((_, index) => <Skeleton key={index} className="h-16 rounded-3xl" />) : macroVariables.map((variable) => (
               <button
                 key={variable.name}
@@ -183,7 +195,7 @@ export default function VariablesPage() {
                 <p className="text-sm font-medium uppercase tracking-[0.2em] text-slate-500">{targetVariable && selectedVariable ? `Evolução da ${targetVariable.name} face a ${selectedVariable.name}` : selectedVariable?.name ?? 'Variável'}</p>
                 <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Série histórica e médias móveis.</p>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <button
                   type="button"
                   onClick={() => setShow3m((prev) => !prev)}
@@ -202,9 +214,9 @@ export default function VariablesPage() {
             </div>
 
             {loading || !selectedVariable ? (
-              <Skeleton className="h-[460px]" />
+              <Skeleton className="h-[340px] sm:h-[460px]" />
             ) : (
-              <div className="h-[460px]">
+              <div className="h-[340px] sm:h-[460px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={comparisonChartData} margin={{ top: 24, right: 24, bottom: 18, left: 10 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -223,7 +235,7 @@ export default function VariablesPage() {
                       tick={{ fill: '#64748b', fontSize: 11 }}
                       tickFormatter={formatAxisTick}
                       domain={selectedAxisDomain}
-                      width={56}
+                      width={48}
                       label={{ value: `${selectedVariable.name} (${selectedVariable.unit})`, angle: -90, position: 'insideLeft', fill: '#64748b', fontSize: 12 }}
                     />
                     <YAxis
@@ -234,7 +246,7 @@ export default function VariablesPage() {
                       tick={{ fill: '#94a3b8', fontSize: 11 }}
                       tickFormatter={formatAxisTick}
                       domain={targetAxisDomain}
-                      width={56}
+                      width={48}
                       label={{ value: `${targetVariable?.name ?? 'Target'} (${targetVariable?.unit ?? '%'})`, angle: 90, position: 'insideRight', fill: '#94a3b8', fontSize: 12 }}
                     />
                     <Tooltip formatter={(value: number) => `${value.toFixed(2)} ${selectedVariable.unit}`} />
@@ -261,7 +273,7 @@ export default function VariablesPage() {
               </TabsList>
 
               <TabsContent value="time">
-                <div className="mt-6 h-[420px] rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900">
+                <div className="mt-6 h-[320px] rounded-3xl border border-slate-200 bg-slate-50 p-4 sm:h-[420px] dark:border-slate-700 dark:bg-slate-900">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={selectedVariable?.series ?? []} margin={{ top: 24, right: 24, bottom: 18, left: 10 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -275,7 +287,7 @@ export default function VariablesPage() {
               </TabsContent>
 
               <TabsContent value="lag">
-                <div className="mt-6 h-[420px] rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900">
+                <div className="mt-6 h-[320px] rounded-3xl border border-slate-200 bg-slate-50 p-4 sm:h-[420px] dark:border-slate-700 dark:bg-slate-900">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={lagCorrelation} margin={{ top: 24, right: 24, bottom: 18, left: 10 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
