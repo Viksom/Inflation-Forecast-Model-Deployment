@@ -41,6 +41,23 @@ function ForecastTooltip({ active, payload, label }: { active?: boolean; payload
   );
 }
 
+function ChartLegend({ payload }: { payload?: Array<{ color?: string; value?: string }> }) {
+  if (!payload || payload.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="flex flex-wrap items-center justify-start gap-x-4 gap-y-2 pb-3 text-xs text-slate-600 dark:text-slate-300 sm:justify-end sm:text-sm">
+      {payload.map((entry) => (
+        <div key={`${entry.value}-${entry.color}`} className="flex min-w-0 items-center gap-2">
+          <span className="h-2.5 w-2.5 flex-none rounded-full" style={{ backgroundColor: entry.color ?? '#64748b' }} />
+          <span className="truncate">{entry.value}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -150,28 +167,28 @@ export default function DashboardPage() {
           <>
             <Card>
               <p className="text-sm font-medium uppercase tracking-[0.2em] text-slate-500">Previsão atual</p>
-              <p className="mt-4 text-4xl font-semibold text-slate-900 dark:text-slate-100">{formatPercent(selectedValue)}</p>
-              <p className="mt-3 flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+              <p className="mt-4 break-words text-3xl font-semibold text-slate-900 dark:text-slate-100 sm:text-4xl">{formatPercent(selectedValue)}</p>
+              <p className="mt-3 flex items-start gap-2 text-sm text-slate-600 dark:text-slate-300">
                 <span className={changeValue >= 0 ? 'text-rose-600' : 'text-emerald-600'}>{changeValue >= 0 ? '▲' : '▼'}</span>
                 {formatPercent(changeValue)} desde o mês anterior
               </p>
             </Card>
             <Card>
               <p className="text-sm font-medium uppercase tracking-[0.2em] text-slate-500">Melhor modelo</p>
-              <p className="mt-4 text-3xl font-semibold text-slate-900 dark:text-slate-100">{bestModel?.model ?? '-'}</p>
-              <div className="mt-4 flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+              <p className="mt-4 break-words text-2xl font-semibold text-slate-900 dark:text-slate-100 sm:text-3xl">{bestModel?.model ?? '-'}</p>
+              <div className="mt-4 flex flex-wrap items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
                 <Badge variant="outline">RMSE</Badge>
                 <span>{bestModel?.rmse.toFixed(2) ?? '-'}</span>
               </div>
             </Card>
             <Card>
               <p className="text-sm font-medium uppercase tracking-[0.2em] text-slate-500">Variação de previsão</p>
-              <p className="mt-4 text-3xl font-semibold text-slate-900 dark:text-slate-100">{formatPercent(Math.abs(changeValue))}</p>
+              <p className="mt-4 break-words text-2xl font-semibold text-slate-900 dark:text-slate-100 sm:text-3xl">{formatPercent(Math.abs(changeValue))}</p>
               <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">Comparado com o período anterior</p>
             </Card>
             <Card>
               <p className="text-sm font-medium uppercase tracking-[0.2em] text-slate-500">Confiança</p>
-              <p className="mt-4 text-3xl font-semibold text-slate-900 dark:text-slate-100">{latest ? formatPercent((latest.confidenceHigh ?? 0) - (latest.confidenceLow ?? 0)) : '-'}</p>
+              <p className="mt-4 break-words text-2xl font-semibold text-slate-900 dark:text-slate-100 sm:text-3xl">{latest ? formatPercent((latest.confidenceHigh ?? 0) - (latest.confidenceLow ?? 0)) : '-'}</p>
               <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
                 <div className="h-full w-2/3 rounded-full bg-indigo-600" />
               </div>
@@ -184,13 +201,13 @@ export default function DashboardPage() {
         {loading ? (
           <Skeleton className="h-[360px] sm:h-[460px]" />
         ) : (
-          <ResponsiveContainer width="100%" height={360} className="sm:!h-[460px]">
-            <ComposedChart data={modelData} margin={{ top: 24, right: 24, bottom: 18, left: 10 }}>
+          <ResponsiveContainer width="100%" height={360}>
+            <ComposedChart data={modelData} margin={{ top: 12, right: 12, bottom: 18, left: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
               <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11 }} tickFormatter={formatMonth} minTickGap={24} />
               <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11 }} />
               <Tooltip content={<ForecastTooltip />} />
-              <Legend verticalAlign="top" align="right" height={40} />
+              <Legend verticalAlign="top" align="left" height={56} content={<ChartLegend />} />
               <Area type="monotone" dataKey="high" name="Interval superior" stroke="transparent" fill="rgba(59, 130, 246, 0.12)" activeDot={false} />
               <Area type="monotone" dataKey="low" name="Interval inferior" stroke="transparent" fill="rgba(59, 130, 246, 0.0)" activeDot={false} />
               <Line type="monotone" dataKey="actual" name="Histórico" stroke="#0f172a" strokeWidth={2} dot={false} />
@@ -259,8 +276,8 @@ export default function DashboardPage() {
               {activeImportance.slice(0, 5).map((item) => (
                 <div key={item.variable} className="rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900">
                   <div className="flex items-center justify-between gap-3 text-sm font-semibold text-slate-900 dark:text-slate-100">
-                    <span>{item.variable}</span>
-                    <span className={item.importance >= 0 ? 'text-emerald-600' : 'text-rose-600'}>{formatPercent(item.importance)}</span>
+                    <span className="min-w-0 break-words">{item.variable}</span>
+                    <span className={item.importance >= 0 ? 'shrink-0 text-emerald-600' : 'shrink-0 text-rose-600'}>{formatPercent(item.importance)}</span>
                   </div>
                   <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
                     <div className={`h-full rounded-full ${item.importance >= 0 ? 'bg-emerald-500' : 'bg-rose-500'}`} style={{ width: `${Math.min(100, Math.abs(item.importance) * 120)}%` }} />
