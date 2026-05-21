@@ -219,7 +219,7 @@ export default function DashboardPage() {
       </div>
 
       <div className="mt-8 grid gap-6 xl:grid-cols-2">
-        <Card>
+        <Card className="min-w-0 overflow-hidden">
           <div className="flex items-center justify-between gap-4">
             <div>
               <p className="text-sm font-medium uppercase tracking-[0.2em] text-slate-500">Desempenho dos modelos</p>
@@ -231,8 +231,8 @@ export default function DashboardPage() {
               {Array.from({ length: 4 }).map((_, index) => <Skeleton key={index} className="h-12 rounded-3xl" />)}
             </div>
           ) : (
-            <div className="mt-6 overflow-x-auto rounded-3xl border border-slate-200 dark:border-slate-700">
-              <Table>
+            <div className="mt-6 max-w-full overflow-x-auto rounded-3xl border border-slate-200 dark:border-slate-700">
+              <Table className="min-w-[36rem]">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Modelo</TableHead>
@@ -260,7 +260,7 @@ export default function DashboardPage() {
           )}
         </Card>
 
-        <Card>
+        <Card className="min-w-0 overflow-hidden">
           <div className="flex items-center justify-between gap-4">
             <div>
               <p className="text-sm font-medium uppercase tracking-[0.2em] text-slate-500">Drivers macroeconómicos</p>
@@ -274,9 +274,9 @@ export default function DashboardPage() {
           ) : selectedModel === 'Ridge' || selectedModel === 'LightGBM' ? (
             <div className="mt-6 space-y-3">
               {activeImportance.slice(0, 5).map((item) => (
-                <div key={item.variable} className="rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900">
-                  <div className="flex items-center justify-between gap-3 text-sm font-semibold text-slate-900 dark:text-slate-100">
-                    <span className="min-w-0 break-words">{item.variable}</span>
+                <div key={item.variable} className="min-w-0 rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900">
+                  <div className="flex min-w-0 flex-col items-start gap-1 text-sm font-semibold text-slate-900 dark:text-slate-100 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                    <span className="w-full break-words">{item.variable}</span>
                     <span className={item.importance >= 0 ? 'shrink-0 text-emerald-600' : 'shrink-0 text-rose-600'}>{formatPercent(item.importance)}</span>
                   </div>
                   <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
