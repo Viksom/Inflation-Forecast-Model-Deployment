@@ -6,6 +6,7 @@ import type {
   MacroVariable,
   ModelKey,
   ModelMetrics,
+  SeriesPoint,
   ScenarioPreset,
   ScenarioControl,
   ScenarioSimulation,
@@ -39,6 +40,10 @@ export function getInflationSeries(horizon: '1M' | '3M' | '12M', model: ModelKey
 
 export function getModelMetrics() {
   return request<ModelMetrics[]>('/api/model-metrics');
+}
+
+export function getCurrentInflation() {
+  return request<SeriesPoint[]>('/api/current-inflation');
 }
 
 export function getFeatureImportance(model: ModelKey) {

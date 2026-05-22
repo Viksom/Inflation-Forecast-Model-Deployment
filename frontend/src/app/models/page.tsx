@@ -20,9 +20,9 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ModelCard } from '@/components/cards/ModelCard';
-import { getInflationSeries, getModelMetrics } from '@/lib/api';
-import { modelToSeriesKey } from '@/lib/utils';
-import type { InflationDataPoint, ModelKey, ModelMetrics } from '@/types';
+import { getCurrentInflation, getInflationSeries, getModelMetrics } from '@/lib/api';
+import { formatMonth, modelToSeriesKey } from '@/lib/utils';
+import type { InflationDataPoint, ModelKey, ModelMetrics, SeriesPoint } from '@/types';
 
 const defaultModels: ModelKey[] = ['ARIMA', 'CC-VAR', 'Ridge', 'LightGBM'];
 const MODELS_REFERENCE_DATE = '2025-10';
@@ -32,6 +32,7 @@ export default function ModelsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [inflationSeries, setInflationSeries] = useState<InflationDataPoint[]>([]);
+  const [currentInflation, setCurrentInflation] = useState<SeriesPoint[]>([]);
   const [modelMetrics, setModelMetrics] = useState<ModelMetrics[]>([]);
 
   useEffect(() => {
@@ -40,10 +41,11 @@ export default function ModelsPage() {
       setLoading(true);
       setError(null);
 
-      Promise.all([getInflationSeries('12M', 'LightGBM'), getModelMetrics()])
-        .then(([series, metrics]) => {
+      Promise.all([getInflationSeries('12M', 'LightGBM'), getCurrentInflation(), getModelMetrics()])
+        .then(([series, currentSeries, metrics]) => {
           if (cancelled) return;
           setInflationSeries(series);
+          setCurrentInflation(currentSeries);
           setModelMetrics(metrics);
         })
         .catch((err: Error) => {
@@ -76,31 +78,43 @@ export default function ModelsPage() {
   };
 
   const overlayData = useMemo(
-    () => inflationSeries.map((item) => ({
-      date: item.date,
-      actual: item.actual,
-      arima: item.arima,
-      ccvar: item.ccvar,
-      ridge: item.ridge,
-      lgbm: item.lgbm,
-    })),
-    [inflationSeries],
+    () => {
+      const actualByDate = new Map(currentInflation.map((point) => [point.date, point.value]));
+      return inflationSeries.map((item) => ({
+        date: item.date,
+        actual: actualByDate.get(item.date) ?? item.actual,
+        arima: item.arima,
+        ccvar: item.ccvar,
+        ridge: item.ridge,
+        lgbm: item.lgbm,
+      }));
+    },
+    [currentInflation, inflationSeries],
   );
   const hasReferenceDate = useMemo(() => overlayData.some((point) => point.date === MODELS_REFERENCE_DATE), [overlayData]);
 
   const residualData = useMemo(
-    () => inflationSeries.filter((point) => point.actual !== null).map((point) => ({
-      date: point.date,
-      ARIMA: (point.actual ?? 0) - (point.arima ?? 0),
-      'CC-VAR': (point.actual ?? 0) - (point.ccvar ?? 0),
-      Ridge: (point.actual ?? 0) - (point.ridge ?? 0),
-      LightGBM: (point.actual ?? 0) - (point.lgbm ?? 0),
-      arimaFitted: point.arima,
-      ccvarFitted: point.ccvar,
-      ridgeFitted: point.ridge,
-      lgbmFitted: point.lgbm,
-    })),
-    [inflationSeries],
+    () => {
+      const actualByDate = new Map(currentInflation.map((point) => [point.date, point.value]));
+      return inflationSeries
+        .map((point) => {
+          const actual = actualByDate.get(point.date) ?? point.actual;
+          return { point, actual };
+        })
+        .filter(({ actual }) => actual !== null && actual !== undefined)
+        .map(({ point, actual }) => ({
+          date: point.date,
+          ARIMA: (actual ?? 0) - (point.arima ?? 0),
+          'CC-VAR': (actual ?? 0) - (point.ccvar ?? 0),
+          Ridge: (actual ?? 0) - (point.ridge ?? 0),
+          LightGBM: (actual ?? 0) - (point.lgbm ?? 0),
+          arimaFitted: point.arima,
+          ccvarFitted: point.ccvar,
+          ridgeFitted: point.ridge,
+          lgbmFitted: point.lgbm,
+        }));
+    },
+    [currentInflation, inflationSeries],
   );
 
   const errorSeries = modelMetrics.map((metric) => ({
@@ -154,11 +168,11 @@ export default function ModelsPage() {
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={overlayData} margin={{ top: 24, right: 24, bottom: 18, left: 10 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis dataKey="date" tickLine={false} axisLine={false} tick={{ fill: '#64748b', fontSize: 11 }} tickFormatter={(value) => value.slice(2)} minTickGap={24} />
+              <XAxis dataKey="date" tickLine={false} axisLine={false} tick={{ fill: '#64748b', fontSize: 11 }} tickFormatter={formatMonth} minTickGap={24} />
               <YAxis tickLine={false} axisLine={false} tick={{ fill: '#64748b', fontSize: 11 }} />
               <Tooltip contentStyle={{ borderRadius: 10, borderColor: '#e2e8f0', backgroundColor: '#fff' }} formatter={(value: number) => `${value.toFixed(1)}%`} />
               <Legend verticalAlign="top" height={40} />
-              <Line dataKey="actual" name="Histórico" stroke="#0f172a" strokeWidth={2} dot={false} />
+              <Line dataKey="actual" name="Histórico" stroke="var(--chart-ink)" strokeWidth={2} dot={false} />
               {visibleModels.includes('ARIMA') && <Line dataKey="arima" name="ARIMA" stroke="#4f46e5" dot={false} />}
               {visibleModels.includes('CC-VAR') && <Line dataKey="ccvar" name="CC-VAR" stroke="#0ea5e9" dot={false} />}
               {visibleModels.includes('Ridge') && <Line dataKey="ridge" name="Ridge" stroke="#14b8a6" dot={false} />}

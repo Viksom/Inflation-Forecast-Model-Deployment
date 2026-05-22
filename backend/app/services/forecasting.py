@@ -91,10 +91,16 @@ class ForecastingService:
         history_start = pd.Timestamp("2018-01-01")
         history_index = self.context.raw_data.loc[history_start:].index
         future_index = future_data.index
-        output_index = history_index.append(future_index)
+        output_end = future_index.max()
+        actual_history_index = self.context.current_inflation.loc[history_start:output_end].index
+        output_index = actual_history_index.union(future_index).sort_values()
 
         predictions = self._all_model_predictions(future_data=future_data, history_index=history_index)
-        actual = self.context.raw_data[TARGET_COL].reindex(output_index)
+        actual = self.context.current_inflation.reindex(output_index)
+        actual_by_date = {
+            index.strftime("%Y-%m"): finite_float(value)
+            for index, value in actual.items()
+        }
 
         mae = self.context.model_metrics.get(selected_model, {}).get("mae")
         selected_field = MODEL_FIELD_MAP[selected_model]
@@ -102,9 +108,10 @@ class ForecastingService:
 
         records: list[dict[str, Any]] = []
         for date_value in output_index:
+            date_key = date_value.strftime("%Y-%m")
             record: dict[str, Any] = {
-                "date": date_value.strftime("%Y-%m"),
-                "actual": finite_float(actual.get(date_value)),
+                "date": date_key,
+                "actual": actual_by_date.get(date_key),
             }
             for model_name, field_name in MODEL_FIELD_MAP.items():
                 record[field_name] = finite_float(predictions[model_name].get(date_value))

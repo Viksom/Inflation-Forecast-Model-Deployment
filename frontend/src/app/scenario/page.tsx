@@ -18,9 +18,9 @@ import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Slider } from '@/components/ui/slider';
 import { useAppStore } from '@/lib/store';
-import { getScenarioControls, getScenarioPresets, simulateScenario } from '@/lib/api';
+import { getCurrentInflation, getScenarioControls, getScenarioPresets, simulateScenario } from '@/lib/api';
 import { formatDecimal, formatPercent, formatMonth } from '@/lib/utils';
-import type { ScenarioControl, ScenarioPreset, ScenarioSimulation } from '@/types';
+import type { ScenarioControl, ScenarioPreset, ScenarioSimulation, SeriesPoint } from '@/types';
 
 function formatScenarioLabel(label: string) {
   if (label === 'Baseline') return 'Base';
@@ -48,6 +48,7 @@ export default function ScenarioPage() {
   const [scenarioPresets, setScenarioPresets] = useState<ScenarioPreset[]>([]);
   const [scenarioControls, setScenarioControls] = useState<ScenarioControl[]>([]);
   const [scenarioResult, setScenarioResult] = useState<ScenarioSimulation | null>(null);
+  const [currentInflation, setCurrentInflation] = useState<SeriesPoint[]>([]);
   const selectedModel = useAppStore((state) => state.selectedModel);
   const forecastHorizon = useAppStore((state) => state.forecastHorizon);
   const activeScenario = useAppStore((state) => state.activeScenario);
@@ -59,11 +60,12 @@ export default function ScenarioPage() {
   useEffect(() => {
     let cancelled = false;
     const load = () => {
-      Promise.all([getScenarioPresets(), getScenarioControls()])
-        .then(([presets, controls]) => {
+      Promise.all([getScenarioPresets(), getScenarioControls(), getCurrentInflation()])
+        .then(([presets, controls, currentSeries]) => {
           if (cancelled) return;
           setScenarioPresets(presets);
           setScenarioControls(controls);
+          setCurrentInflation(currentSeries);
         })
         .catch((err: Error) => {
           if (!cancelled) setError(err.message);
@@ -114,6 +116,17 @@ export default function ScenarioPage() {
   const baselineSeries = scenarioResult?.baselineSeries ?? [];
   const scenarioSeries = scenarioResult?.scenarioSeries ?? [];
   const delta = scenarioResult?.delta ?? 0;
+  const scenarioChartData = useMemo(() => {
+    const actualByDate = new Map(currentInflation.map((point) => [point.date, point.value]));
+    const scenarioByDate = new Map(scenarioSeries.map((point) => [point.date, point.value]));
+
+    return baselineSeries.map((point) => ({
+      date: point.date,
+      actual: actualByDate.get(point.date) ?? null,
+      baseline: point.value,
+      scenario: scenarioByDate.get(point.date) ?? null,
+    }));
+  }, [baselineSeries, currentInflation, scenarioSeries]);
 
   const driverList = useMemo(
     () => (scenarioResult?.driverImpact ?? []).map((driver) => ({
@@ -217,23 +230,30 @@ export default function ScenarioPage() {
               ) : (
                 <div className="h-[340px] sm:h-[420px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={baselineSeries} margin={{ top: 24, right: 24, bottom: 18, left: 10 }}>
+                    <LineChart data={scenarioChartData} margin={{ top: 24, right: 24, bottom: 18, left: 10 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                       <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11 }} tickFormatter={formatMonth} minTickGap={24} />
                       <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11 }} />
                       <Tooltip formatter={(value: number) => `${value.toFixed(1)}%`} />
                       <Line
                         type="monotone"
-                        data={baselineSeries}
-                        dataKey="value"
+                        dataKey="actual"
+                        name="Histórico"
+                        stroke="var(--chart-ink)"
+                        strokeWidth={2}
+                        dot={false}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="baseline"
                         name="Base"
                         stroke="#475569"
                         strokeWidth={3}
                         dot={false}
                         strokeDasharray="5 5"
                       />
-                      <Line type="monotone" data={scenarioSeries} dataKey="value" name="Cenário" stroke="#4f46e5" strokeWidth={3} dot={false} />
-                      <Area type="monotone" data={scenarioSeries} dataKey="value" name="Intervalo" stroke="transparent" fill="rgba(79, 70, 229, 0.12)" />
+                      <Line type="monotone" dataKey="scenario" name="Cenário" stroke="#4f46e5" strokeWidth={3} dot={false} />
+                      <Area type="monotone" dataKey="scenario" name="Intervalo" stroke="transparent" fill="rgba(79, 70, 229, 0.12)" />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>

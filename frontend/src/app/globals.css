@@ -12,6 +12,7 @@
   --accent: #312e81;
   --positive: #16a34a;
   --negative: #be185d;
+  --chart-ink: #0f172a;
 }
 
 .dark {
@@ -24,6 +25,7 @@
   --accent: #818cf8;
   --positive: #34d399;
   --negative: #f472b6;
+  --chart-ink: #fbbf24;
 }
 
 html {

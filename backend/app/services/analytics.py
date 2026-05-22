@@ -11,7 +11,6 @@ from app.services.context import ApplicationContext
 from app.utils.features import translate_feature
 from app.utils.json import finite_float
 
-
 VARIABLE_EXPLORER_KEYS = [
     "HICPOV_PT_ea-md",
     "HICPNG_PT_ea-md",
@@ -24,12 +23,12 @@ VARIABLE_EXPLORER_KEYS = [
 ]
 
 VARIABLE_METADATA = {
-    "HICPOV_PT_ea-md": {"unit": "%", "source": "Eurostat"},
-    "HICPNG_PT_ea-md": {"unit": "%", "source": "Eurostat"},
-    "HICPNEF_PT_ea-md": {"unit": "%", "source": "Eurostat"},
+    "HICPOV_PT_ea-md": {"unit": "Index", "source": "Eurostat"},
+    "HICPNG_PT_ea-md": {"unit": "Index", "source": "Eurostat"},
+    "HICPNEF_PT_ea-md": {"unit": "Index", "source": "Eurostat"},
     "PPIPT_ppi": {"unit": "Index", "source": "Banco de Portugal"},
     "epu_pt_epu": {"unit": "Index", "source": "EPU Portugal"},
-    "CCI_PT_ea-md": {"unit": "Index", "source": "INE"},
+    "CCI_PT_ea-md": {"unit": "Index", "source": "OECD"},
     "PCEPI_fred-md": {"unit": "Index", "source": "FRED"},
     "EXPGS_PT_ea-qd": {"unit": "Index", "source": "Eurostat"},
 }
@@ -48,6 +47,13 @@ CORRELATION_KEYS = [
 class AnalyticsService:
     def __init__(self, context: ApplicationContext):
         self.context = context
+
+    def current_inflation(self) -> list[dict[str, Any]]:
+        series = self.context.current_inflation.astype(float)
+        return [
+            {"date": index.strftime("%Y-%m"), "value": finite_float(value)}
+            for index, value in series.items()
+        ]
 
     def macro_variables(self) -> list[dict[str, Any]]:
         variables = []

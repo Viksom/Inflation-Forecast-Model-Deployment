@@ -18,11 +18,25 @@ import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAppStore } from '@/lib/store';
-import { getFeatureImportance, getInflationSeries, getModelMetrics } from '@/lib/api';
+import { getCurrentInflation, getFeatureImportance, getInflationSeries, getModelMetrics } from '@/lib/api';
 import { formatPercent, formatMonth, modelToSeriesKey } from '@/lib/utils';
-import type { FeatureImportance, InflationDataPoint, ModelMetrics } from '@/types';
+import type { FeatureImportance, InflationDataPoint, ModelMetrics, SeriesPoint } from '@/types';
 
 const DASHBOARD_REFERENCE_DATE = '2025-10';
+const FORECAST_START_DATE = '2025-10';
+const HORIZON_STEPS = {
+  '1M': 1,
+  '3M': 3,
+  '12M': 12,
+} as const;
+
+function addMonths(dateKey: string, monthsToAdd: number) {
+  const [year, month] = dateKey.split('-').map(Number);
+  const date = new Date(year, month - 1 + monthsToAdd, 1);
+  const nextYear = date.getFullYear();
+  const nextMonth = String(date.getMonth() + 1).padStart(2, '0');
+  return `${nextYear}-${nextMonth}`;
+}
 
 function formatModelCategory(category: string) {
   if (category === 'Classical') return 'Clássico';
@@ -72,10 +86,12 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [inflationSeries, setInflationSeries] = useState<InflationDataPoint[]>([]);
+  const [currentInflation, setCurrentInflation] = useState<SeriesPoint[]>([]);
   const [modelMetrics, setModelMetrics] = useState<ModelMetrics[]>([]);
   const [featureImportance, setFeatureImportance] = useState<FeatureImportance[]>([]);
   const selectedModel = useAppStore((state) => state.selectedModel);
   const forecastHorizon = useAppStore((state) => state.forecastHorizon);
+  const maxVisibleDate = addMonths(FORECAST_START_DATE, HORIZON_STEPS[forecastHorizon]);
 
   useEffect(() => {
     let cancelled = false;
@@ -89,12 +105,14 @@ export default function DashboardPage() {
 
       Promise.all([
         getInflationSeries(forecastHorizon, selectedModel),
+        getCurrentInflation(),
         getModelMetrics(),
         importanceRequest,
       ])
-        .then(([series, metrics, importance]) => {
+        .then(([series, currentSeries, metrics, importance]) => {
           if (cancelled) return;
           setInflationSeries(series);
+          setCurrentInflation(currentSeries);
           setModelMetrics(metrics);
           setFeatureImportance(importance);
         })
@@ -121,9 +139,13 @@ export default function DashboardPage() {
     };
   }, [forecastHorizon, selectedModel]);
 
-  const latest = inflationSeries[inflationSeries.length - 1];
-  const previous = inflationSeries[inflationSeries.length - 2];
   const selectedKey = modelToSeriesKey(selectedModel);
+  const visibleInflationSeries = useMemo(
+    () => inflationSeries.filter((point) => point.date <= maxVisibleDate),
+    [inflationSeries, maxVisibleDate],
+  );
+  const latest = visibleInflationSeries[visibleInflationSeries.length - 1];
+  const previous = visibleInflationSeries[visibleInflationSeries.length - 2];
 
   const selectedValue = latest?.[selectedKey] ?? 0;
   const modelName = selectedModel;
@@ -132,14 +154,18 @@ export default function DashboardPage() {
   const changeValue = selectedValue - (previous?.[selectedKey] ?? selectedValue);
 
   const modelData = useMemo(
-    () => inflationSeries.map((point) => ({
-      date: point.date,
-      actual: point.actual,
-      selected: point[selectedKey],
-      low: point.confidenceLow,
-      high: point.confidenceHigh,
-    })),
-    [inflationSeries, selectedKey],
+    () => {
+      const actualByDate = new Map(currentInflation.map((point) => [point.date, point.value]));
+      return visibleInflationSeries
+        .map((point) => ({
+          date: point.date,
+          actual: actualByDate.get(point.date) ?? point.actual,
+          selected: point[selectedKey],
+          low: point.confidenceLow,
+          high: point.confidenceHigh,
+        }));
+    },
+    [currentInflation, selectedKey, visibleInflationSeries],
   );
 
   const activeImportance = useMemo(
@@ -220,7 +246,7 @@ export default function DashboardPage() {
               <Legend verticalAlign="top" align="left" height={56} content={<ChartLegend />} />
               <Area type="monotone" dataKey="high" name="Interval superior" legendType="none" stroke="transparent" fill="rgba(59, 130, 246, 0.12)" activeDot={false} />
               <Area type="monotone" dataKey="low" name="Interval inferior" legendType="none" stroke="transparent" fill="rgba(59, 130, 246, 0.0)" activeDot={false} />
-              <Line type="monotone" dataKey="actual" name="Histórico" stroke="#0f172a" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="actual" name="Histórico" stroke="var(--chart-ink)" strokeWidth={2} dot={false} />
               <Line type="monotone" dataKey="selected" name={`Previsão ${modelName}`} stroke="#4f46e5" strokeWidth={3} dot={false} strokeDasharray="5 5" />
               {hasReferenceDate ? <ReferenceLine x={DASHBOARD_REFERENCE_DATE} stroke="#64748b" strokeDasharray="3 3" label="Treino" /> : null}
             </ComposedChart>

@@ -14,6 +14,7 @@ from app.schemas.api import (
     ScenarioControl,
     ScenarioPreset,
     ScenarioSimulationRequest,
+    SeriesPoint,
 )
 from app.services.analytics import AnalyticsService
 from app.services.context import ApplicationContext
@@ -36,6 +37,11 @@ def inflation_series(
 @router.get("/model-metrics", response_model=list[ModelMetrics])
 def model_metrics(context: Annotated[ApplicationContext, Depends(get_context)]):
     return json_safe(ForecastingService(context).model_metrics())
+
+
+@router.get("/current-inflation", response_model=list[SeriesPoint])
+def current_inflation(context: Annotated[ApplicationContext, Depends(get_context)]):
+    return json_safe(AnalyticsService(context).current_inflation())
 
 
 @router.get("/feature-importance", response_model=list[FeatureImportance])

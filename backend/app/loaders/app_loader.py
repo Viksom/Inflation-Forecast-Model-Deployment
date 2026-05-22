@@ -1,11 +1,12 @@
 from app.loaders.config_loader import load_configs, validate_configs
-from app.loaders.data_loader import load_raw_data
+from app.loaders.data_loader import load_current_inflation, load_raw_data
 from app.loaders.model_loader import load_models, load_preprocessor
 from app.services.context import ApplicationContext
 
 
 def load_application_context() -> ApplicationContext:
     raw_data = load_raw_data()
+    current_inflation = load_current_inflation()
     feature_map, scenario_presets, model_metrics, variable_sets = load_configs()
 
     validate_configs(
@@ -21,6 +22,7 @@ def load_application_context() -> ApplicationContext:
 
     return ApplicationContext(
         raw_data=raw_data,
+        current_inflation=current_inflation,
         feature_map=feature_map,
         scenario_presets=scenario_presets,
         model_metrics=model_metrics,

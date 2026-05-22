@@ -8,6 +8,7 @@ BACKEND_DIR = APP_DIR.parent
 CONFIG_DIR = APP_DIR / "config"
 DATA_DIR = APP_DIR / "data"
 RAW_DATA_PATH = DATA_DIR / "raw" / "inflation.csv"
+CURRENT_INFLATION_PATH = DATA_DIR / "Current_Inflation.csv"
 MODELS_DIR = APP_DIR / "models"
 
 FEATURE_MAP_PATH = CONFIG_DIR / "feature_map.json"
