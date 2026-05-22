@@ -22,6 +22,26 @@ import { getScenarioControls, getScenarioPresets, simulateScenario } from '@/lib
 import { formatDecimal, formatPercent, formatMonth } from '@/lib/utils';
 import type { ScenarioControl, ScenarioPreset, ScenarioSimulation } from '@/types';
 
+function formatScenarioLabel(label: string) {
+  if (label === 'Baseline') return 'Base';
+  if (label === 'Optimistic') return 'Otimista';
+  if (label === 'Pessimistic') return 'Pessimista';
+  if (label === 'Energy Shock') return 'Choque Energético';
+  if (label === 'Monetary Tightening') return 'Aperto Monetário';
+  if (label === 'Custom') return 'Personalizado';
+  return label;
+}
+
+function formatScenarioDescription(label: string, description: string) {
+  if (label === 'Baseline') return 'Continuação das tendências históricas.';
+  if (label === 'Optimistic') return 'Menor pressão inflacionista e confiança mais forte.';
+  if (label === 'Pessimistic') return 'Choques de oferta persistentes e confiança fraca.';
+  if (label === 'Energy Shock') return 'Choque no petróleo e nos preços no produtor.';
+  if (label === 'Monetary Tightening') return 'Taxas mais altas e condições de crédito mais fracas.';
+  if (label === 'Custom') return 'Cenário ajustado manualmente.';
+  return description;
+}
+
 export default function ScenarioPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -144,10 +164,10 @@ export default function ScenarioPage() {
                   }`}
                 >
                   <div className="flex items-center justify-between gap-3">
-                    <span className="font-semibold">{preset.label}</span>
+                    <span className="font-semibold">{formatScenarioLabel(preset.label)}</span>
                     <Badge variant="outline">{preset.key === 'Baseline' ? 'Base' : 'Cenário'}</Badge>
                   </div>
-                  <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{preset.description}</p>
+                  <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{formatScenarioDescription(preset.label, preset.description)}</p>
                 </button>
               ))}
             </div>
@@ -199,20 +219,20 @@ export default function ScenarioPage() {
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={baselineSeries} margin={{ top: 24, right: 24, bottom: 18, left: 10 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                      <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11 }} tickFormatter={(value) => value.slice(2)} minTickGap={24} />
+                      <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11 }} tickFormatter={formatMonth} minTickGap={24} />
                       <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11 }} />
                       <Tooltip formatter={(value: number) => `${value.toFixed(1)}%`} />
                       <Line
                         type="monotone"
                         data={baselineSeries}
                         dataKey="value"
-                        name="Baseline"
+                        name="Base"
                         stroke="#475569"
                         strokeWidth={3}
                         dot={false}
                         strokeDasharray="5 5"
                       />
-                      <Line type="monotone" data={scenarioSeries} dataKey="value" name="Scenario" stroke="#4f46e5" strokeWidth={3} dot={false} />
+                      <Line type="monotone" data={scenarioSeries} dataKey="value" name="Cenário" stroke="#4f46e5" strokeWidth={3} dot={false} />
                       <Area type="monotone" data={scenarioSeries} dataKey="value" name="Intervalo" stroke="transparent" fill="rgba(79, 70, 229, 0.12)" />
                     </LineChart>
                   </ResponsiveContainer>
@@ -241,7 +261,7 @@ export default function ScenarioPage() {
             <Card>
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <p className="text-sm font-medium uppercase tracking-[0.2em] text-slate-500">Impacto dos drivers</p>
+                  <p className="text-sm font-medium uppercase tracking-[0.2em] text-slate-500">Impacto dos determinantes</p>
                   <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Variáveis com maior contribuição para a direção do cenário.</p>
                 </div>
               </div>

@@ -7,7 +7,7 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
 export const metadata: Metadata = {
   title: 'InflaçãoPT | Plataforma de Previsão Macroeconómica',
-  description: 'Dashboard institucional para análise de inflação portuguesa e cenários macroeconómicos.',
+  description: 'Painel institucional para análise da inflação portuguesa e de cenários macroeconómicos.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

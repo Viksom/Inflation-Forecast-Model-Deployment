@@ -24,6 +24,12 @@ import type { FeatureImportance, InflationDataPoint, ModelMetrics } from '@/type
 
 const DASHBOARD_REFERENCE_DATE = '2025-10';
 
+function formatModelCategory(category: string) {
+  if (category === 'Classical') return 'Clássico';
+  if (category === 'Machine Learning') return 'Aprendizagem Automática';
+  return category;
+}
+
 function ForecastTooltip({ active, payload, label }: { active?: boolean; payload?: any; label?: string }) {
   if (!active || !payload || payload.length === 0) {
     return null;
@@ -42,13 +48,17 @@ function ForecastTooltip({ active, payload, label }: { active?: boolean; payload
 }
 
 function ChartLegend({ payload }: { payload?: Array<{ color?: string; value?: string }> }) {
-  if (!payload || payload.length === 0) {
+  const visibleEntries = (payload ?? []).filter(
+    (entry) => entry.value !== 'Interval superior' && entry.value !== 'Interval inferior',
+  );
+
+  if (visibleEntries.length === 0) {
     return null;
   }
 
   return (
     <div className="flex flex-wrap items-center justify-start gap-x-4 gap-y-2 pb-3 text-xs text-slate-600 dark:text-slate-300 sm:justify-end sm:text-sm">
-      {payload.map((entry) => (
+      {visibleEntries.map((entry) => (
         <div key={`${entry.value}-${entry.color}`} className="flex min-w-0 items-center gap-2">
           <span className="h-2.5 w-2.5 flex-none rounded-full" style={{ backgroundColor: entry.color ?? '#64748b' }} />
           <span className="truncate">{entry.value}</span>
@@ -148,7 +158,7 @@ export default function DashboardPage() {
 
       <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
-          <p className="text-sm uppercase tracking-[0.3em] text-slate-500">Dashboard</p>
+          <p className="text-sm uppercase tracking-[0.3em] text-slate-500">Painel</p>
           <h1 className="mt-2 text-3xl font-semibold text-slate-900 dark:text-slate-100">Perspetiva de inflação para Portugal</h1>
           <p className="mt-2 max-w-2xl text-sm text-slate-500 dark:text-slate-400">
             Visão consolidada do ciclo de inflação, desempenho dos modelos e confiança das previsões para os próximos meses.
@@ -208,10 +218,10 @@ export default function DashboardPage() {
               <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11 }} />
               <Tooltip content={<ForecastTooltip />} />
               <Legend verticalAlign="top" align="left" height={56} content={<ChartLegend />} />
-              <Area type="monotone" dataKey="high" name="Interval superior" stroke="transparent" fill="rgba(59, 130, 246, 0.12)" activeDot={false} />
-              <Area type="monotone" dataKey="low" name="Interval inferior" stroke="transparent" fill="rgba(59, 130, 246, 0.0)" activeDot={false} />
+              <Area type="monotone" dataKey="high" name="Interval superior" legendType="none" stroke="transparent" fill="rgba(59, 130, 246, 0.12)" activeDot={false} />
+              <Area type="monotone" dataKey="low" name="Interval inferior" legendType="none" stroke="transparent" fill="rgba(59, 130, 246, 0.0)" activeDot={false} />
               <Line type="monotone" dataKey="actual" name="Histórico" stroke="#0f172a" strokeWidth={2} dot={false} />
-              <Line type="monotone" dataKey="selected" name={`${modelName} Forecast`} stroke="#4f46e5" strokeWidth={3} dot={false} strokeDasharray="5 5" />
+              <Line type="monotone" dataKey="selected" name={`Previsão ${modelName}`} stroke="#4f46e5" strokeWidth={3} dot={false} strokeDasharray="5 5" />
               {hasReferenceDate ? <ReferenceLine x={DASHBOARD_REFERENCE_DATE} stroke="#64748b" strokeDasharray="3 3" label="Treino" /> : null}
             </ComposedChart>
           </ResponsiveContainer>
@@ -251,7 +261,7 @@ export default function DashboardPage() {
                       <TableCell>{model.mae.toFixed(2)}</TableCell>
                       <TableCell>{model.rrmse.toFixed(2)}</TableCell>
                       <TableCell>{model.rmae.toFixed(2)}</TableCell>
-                      <TableCell><Badge variant="outline">{model.category}</Badge></TableCell>
+                      <TableCell><Badge variant="outline">{formatModelCategory(model.category)}</Badge></TableCell>
                     </TableRow>
                   ))}
                 </tbody>
@@ -263,7 +273,7 @@ export default function DashboardPage() {
         <Card className="min-w-0 overflow-hidden">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <p className="text-sm font-medium uppercase tracking-[0.2em] text-slate-500">Drivers macroeconómicos</p>
+              <p className="text-sm font-medium uppercase tracking-[0.2em] text-slate-500">Determinantes macroeconómicos</p>
               <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Importância de cada variável no modelo selecionado.</p>
             </div>
           </div>
@@ -287,7 +297,7 @@ export default function DashboardPage() {
             </div>
           ) : (
             <div className="mt-6 rounded-3xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-950 dark:text-amber-100">
-              A análise de drivers não está disponível para modelos ARIMA ou CC-VAR. Selecione Ridge ou LightGBM para visualizar importância e sensibilidades das variáveis.
+              A análise de determinantes não está disponível para modelos ARIMA ou CC-VAR. Selecione Ridge ou LightGBM para visualizar importância e sensibilidades das variáveis.
             </div>
           )}
         </Card>

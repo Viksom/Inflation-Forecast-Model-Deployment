@@ -5,6 +5,12 @@ import { LineChart, Line, ResponsiveContainer } from 'recharts';
 import type { InflationDataPoint, ModelMetrics } from '@/types';
 import { modelToSeriesKey } from '@/lib/utils';
 
+function formatModelCategory(category: string) {
+  if (category === 'Classical') return 'Clássico';
+  if (category === 'Machine Learning') return 'Aprendizagem Automática';
+  return category;
+}
+
 interface ModelCardProps {
   model: ModelMetrics;
   data: InflationDataPoint[];
@@ -23,7 +29,7 @@ export function ModelCard({ model, data }: ModelCardProps) {
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{model.model}</p>
-            <Badge variant={model.category === 'Classical' ? 'outline' : 'default'} className="mt-2">{model.category}</Badge>
+            <Badge variant={model.category === 'Classical' ? 'outline' : 'default'} className="mt-2">{formatModelCategory(model.category)}</Badge>
           </div>
         </div>
 
@@ -56,7 +62,7 @@ export function ModelCard({ model, data }: ModelCardProps) {
       </button>
       {open ? (
         <div className="mt-4 rounded-3xl bg-slate-50 p-4 text-sm text-slate-600 dark:bg-slate-900 dark:text-slate-300">
-          Previsão e análise histórica para {model.model}. A eficiência do modelo reflete a qualidade ajustada do forecast e a compatibilidade com cenários.
+          Previsão e análise histórica para {model.model}. A eficiência do modelo reflete a qualidade ajustada da previsão e a compatibilidade com cenários.
         </div>
       ) : null}
     </Card>

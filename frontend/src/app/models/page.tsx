@@ -199,7 +199,14 @@ export default function ModelsPage() {
                   <ResponsiveContainer width="100%" height="100%">
                     <ScatterChart margin={{ top: 10, right: 10, bottom: 10, left: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                      <XAxis dataKey={`${modelToSeriesKey(model)}Fitted`} name="Ajustado" tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} />
+                      <XAxis
+                        dataKey={`${modelToSeriesKey(model)}Fitted`}
+                        name="Ajustado"
+                        tick={{ fill: '#64748b', fontSize: 10 }}
+                        tickFormatter={(value: number) => value.toFixed(2)}
+                        axisLine={false}
+                        tickLine={false}
+                      />
                       <YAxis dataKey={model} name="Resíduo" tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} />
                       <Tooltip formatter={(value: number) => `${value.toFixed(2)}%`} cursor={{ strokeDasharray: '3 3' }} />
                       <Scatter data={residualData} fill={model === 'LightGBM' ? '#d97706' : model === 'Ridge' ? '#14b8a6' : model === 'ARIMA' ? '#4f46e5' : '#0ea5e9'} name={model} />

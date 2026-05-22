@@ -247,10 +247,10 @@ export default function VariablesPage() {
                       tickFormatter={formatAxisTick}
                       domain={targetAxisDomain}
                       width={48}
-                      label={{ value: `${targetVariable?.name ?? 'Target'} (${targetVariable?.unit ?? '%'})`, angle: 90, position: 'insideRight', fill: '#94a3b8', fontSize: 12 }}
+                      label={{ value: `${targetVariable?.name ?? 'Variável-alvo'} (${targetVariable?.unit ?? '%'})`, angle: 90, position: 'insideRight', fill: '#94a3b8', fontSize: 12 }}
                     />
                     <Tooltip formatter={(value: number) => `${value.toFixed(2)} ${selectedVariable.unit}`} />
-                    <Line yAxisId="target" type="monotone" dataKey="target" name={targetVariable?.name ?? 'Target'} stroke="#94a3b8" strokeWidth={2} dot={false} />
+                    <Line yAxisId="target" type="monotone" dataKey="target" name={targetVariable?.name ?? 'Variável-alvo'} stroke="#94a3b8" strokeWidth={2} dot={false} />
                     <Line yAxisId="selected" type="monotone" dataKey="selected" name={selectedVariable.name} stroke="#0f172a" strokeWidth={2} dot={false} />
                     {show3m && <Line yAxisId="selected" type="monotone" data={average3m} dataKey="value" name="Média 3M" stroke="#2563eb" strokeWidth={2} dot={false} />}
                     {show12m && <Line yAxisId="selected" type="monotone" data={average12m} dataKey="value" name="Média 12M" stroke="#0ea5e9" strokeWidth={2} dot={false} />}
@@ -268,7 +268,7 @@ export default function VariablesPage() {
             <div className="rounded-3xl border border-base bg-surface p-6 shadow-soft">
               <TabsList>
                 <TabsTrigger value="time">Série Temporal</TabsTrigger>
-                <TabsTrigger value="lag">Lag Analysis</TabsTrigger>
+                <TabsTrigger value="lag">Análise de Defasagens</TabsTrigger>
                 <TabsTrigger value="corr">Correlação</TabsTrigger>
               </TabsList>
 

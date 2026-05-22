@@ -17,10 +17,10 @@ import { ThemeToggle } from '@/components/layout/ThemeToggle';
 import type { ModelKey } from '@/types';
 
 const navItems = [
-  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { label: 'Models', href: '/models', icon: Boxes },
-  { label: 'Scenario Analysis', href: '/scenario', icon: SlidersHorizontal },
-  { label: 'Variables', href: '/variables', icon: LineChart },
+  { label: 'Painel', href: '/dashboard', icon: LayoutDashboard },
+  { label: 'Modelos', href: '/models', icon: Boxes },
+  { label: 'Análise de Cenários', href: '/scenario', icon: SlidersHorizontal },
+  { label: 'Variáveis', href: '/variables', icon: LineChart },
 ];
 
 const modelOptions: ModelKey[] = ['ARIMA', 'CC-VAR', 'Ridge', 'LightGBM'];
@@ -53,7 +53,7 @@ export function Navbar() {
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-brand-600 text-white shadow-soft">DS</div>
             <div>
-              <p className="hidden text-sm font-medium uppercase tracking-[0.24em] text-slate-500 dark:text-slate-400 sm:block">Data Science Group</p>
+              <p className="hidden text-sm font-medium uppercase tracking-[0.24em] text-slate-500 dark:text-slate-400 sm:block">Grupo de Ciência de Dados</p>
               <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 sm:text-base">Plataforma de Inflação</p>
             </div>
           </div>

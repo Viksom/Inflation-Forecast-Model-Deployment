@@ -23,7 +23,7 @@ export function ThemeToggle() {
   };
 
   if (!mounted) {
-    return <button type="button" className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-base bg-slate-50 text-slate-700 dark:bg-slate-900 dark:text-slate-200" aria-label="Toggle theme" />;
+    return <button type="button" className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-base bg-slate-50 text-slate-700 dark:bg-slate-900 dark:text-slate-200" aria-label="Alternar tema" />;
   }
 
   return (
