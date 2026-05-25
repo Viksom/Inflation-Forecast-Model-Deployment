@@ -18,7 +18,6 @@ import {
 } from 'recharts';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
 import { ModelCard } from '@/components/cards/ModelCard';
 import { LoadingStage } from '@/components/ui/loading-stage';
 import { getCurrentInflation, getInflationSeries, getModelMetrics } from '@/lib/api';
@@ -27,6 +26,12 @@ import type { InflationDataPoint, ModelKey, ModelMetrics, SeriesPoint } from '@/
 
 const defaultModels: ModelKey[] = ['ARIMA', 'CC-VAR', 'Ridge', 'LightGBM'];
 const MODELS_REFERENCE_DATE = '2025-10';
+const MODEL_ACCENTS: Record<ModelKey, string> = {
+  ARIMA: '#4f46e5',
+  'CC-VAR': '#0ea5e9',
+  Ridge: '#14b8a6',
+  LightGBM: '#d97706',
+};
 
 export default function ModelsPage() {
   const [visibleModels, setVisibleModels] = useState<ModelKey[]>(defaultModels);
@@ -78,45 +83,43 @@ export default function ModelsPage() {
     );
   };
 
-  const overlayData = useMemo(
-    () => {
-      const actualByDate = new Map(currentInflation.map((point) => [point.date, point.value]));
-      return inflationSeries.map((item) => ({
-        date: item.date,
-        actual: actualByDate.get(item.date) ?? item.actual,
-        arima: item.arima,
-        ccvar: item.ccvar,
-        ridge: item.ridge,
-        lgbm: item.lgbm,
-      }));
-    },
-    [currentInflation, inflationSeries],
-  );
-  const hasReferenceDate = useMemo(() => overlayData.some((point) => point.date === MODELS_REFERENCE_DATE), [overlayData]);
+  const overlayData = useMemo(() => {
+    const actualByDate = new Map(currentInflation.map((point) => [point.date, point.value]));
+    return inflationSeries.map((item) => ({
+      date: item.date,
+      actual: actualByDate.get(item.date) ?? item.actual,
+      arima: item.arima,
+      ccvar: item.ccvar,
+      ridge: item.ridge,
+      lgbm: item.lgbm,
+    }));
+  }, [currentInflation, inflationSeries]);
 
-  const residualData = useMemo(
-    () => {
-      const actualByDate = new Map(currentInflation.map((point) => [point.date, point.value]));
-      return inflationSeries
-        .map((point) => {
-          const actual = actualByDate.get(point.date) ?? point.actual;
-          return { point, actual };
-        })
-        .filter(({ actual }) => actual !== null && actual !== undefined)
-        .map(({ point, actual }) => ({
-          date: point.date,
-          ARIMA: (actual ?? 0) - (point.arima ?? 0),
-          'CC-VAR': (actual ?? 0) - (point.ccvar ?? 0),
-          Ridge: (actual ?? 0) - (point.ridge ?? 0),
-          LightGBM: (actual ?? 0) - (point.lgbm ?? 0),
-          arimaFitted: point.arima,
-          ccvarFitted: point.ccvar,
-          ridgeFitted: point.ridge,
-          lgbmFitted: point.lgbm,
-        }));
-    },
-    [currentInflation, inflationSeries],
+  const hasReferenceDate = useMemo(
+    () => overlayData.some((point) => point.date === MODELS_REFERENCE_DATE),
+    [overlayData],
   );
+
+  const residualData = useMemo(() => {
+    const actualByDate = new Map(currentInflation.map((point) => [point.date, point.value]));
+    return inflationSeries
+      .map((point) => {
+        const actual = actualByDate.get(point.date) ?? point.actual;
+        return { point, actual };
+      })
+      .filter(({ actual }) => actual !== null && actual !== undefined)
+      .map(({ point, actual }) => ({
+        date: point.date,
+        ARIMA: (actual ?? 0) - (point.arima ?? 0),
+        'CC-VAR': (actual ?? 0) - (point.ccvar ?? 0),
+        Ridge: (actual ?? 0) - (point.ridge ?? 0),
+        LightGBM: (actual ?? 0) - (point.lgbm ?? 0),
+        arimaFitted: point.arima,
+        ccvarFitted: point.ccvar,
+        ridgeFitted: point.ridge,
+        lgbmFitted: point.lgbm,
+      }));
+  }, [currentInflation, inflationSeries]);
 
   const errorSeries = modelMetrics.map((metric) => ({
     model: metric.model,
@@ -144,41 +147,88 @@ export default function ModelsPage() {
       ) : null}
 
       <div className="grid gap-4 sm:grid-cols-2 sm:gap-6 xl:grid-cols-4">
-        {loading ? Array.from({ length: 4 }).map((_, index) => (
-          <Card key={index} className="h-[340px]" />
-        )) : modelMetrics.map((model) => (
-          <ModelCard key={model.model} model={model} data={inflationSeries.slice(-18)} />
-        ))}
+        {loading
+          ? Array.from({ length: 4 }).map((_, index) => <Card key={index} className="h-[340px]" />)
+          : modelMetrics.map((model) => (
+              <ModelCard key={model.model} model={model} data={inflationSeries.slice(-18)} />
+            ))}
       </div>
 
       <Card className="mt-8">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <p className="text-sm font-medium uppercase tracking-[0.2em] text-slate-500">Sobreposição de previsões</p>
-            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Selecione modelos para comparar as trajetórias de previsão e histórica.</p>
+            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+              Selecione os modelos que quer ver no mesmo traçado para comparar comportamento e dispersão.
+            </p>
           </div>
-          <div className="flex flex-wrap gap-3">
-            {defaultModels.map((model) => (
-              <label key={model} className="inline-flex items-center gap-2 rounded-2xl bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:bg-slate-900 dark:text-slate-200">
-                <Checkbox checked={visibleModels.includes(model)} onChange={() => toggleModel(model)} />
-                {model}
-              </label>
-            ))}
+          <div className="flex items-center gap-3 self-start rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-medium text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+            <span className="h-2 w-2 rounded-full bg-emerald-500" />
+            {visibleModels.length} de {defaultModels.length} modelos visíveis
           </div>
         </div>
+
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {defaultModels.map((model) => {
+            const active = visibleModels.includes(model);
+            return (
+              <button
+                key={model}
+                type="button"
+                onClick={() => toggleModel(model)}
+                aria-pressed={active}
+                className={`group inline-flex items-center justify-between gap-4 rounded-2xl border px-4 py-3 text-left transition ${
+                  active
+                    ? 'border-indigo-200 bg-[linear-gradient(135deg,rgba(99,102,241,0.14),rgba(15,23,42,0.02))] text-slate-900 shadow-md shadow-indigo-100/70 dark:border-indigo-400/30 dark:bg-[linear-gradient(135deg,rgba(99,102,241,0.22),rgba(30,41,59,0.78))] dark:text-slate-100 dark:shadow-indigo-950/30'
+                    : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-slate-600 dark:hover:bg-slate-800'
+                }`}
+              >
+                <span className="flex min-w-0 items-center gap-3">
+                  <span className="h-3 w-3 flex-none rounded-full" style={{ backgroundColor: MODEL_ACCENTS[model] }} />
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-semibold">{model}</span>
+                    <span className={`block text-xs ${active ? 'text-slate-600 dark:text-slate-300' : 'text-slate-500 dark:text-slate-400'}`}>
+                      {active ? 'Incluído no gráfico' : 'Oculto do gráfico'}
+                    </span>
+                  </span>
+                </span>
+                <span
+                  className={`inline-flex h-6 min-w-6 items-center justify-center rounded-full px-2 text-[11px] font-semibold ${
+                    active
+                      ? 'bg-white/80 text-indigo-700 dark:bg-slate-800/80 dark:text-indigo-200'
+                      : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300'
+                  }`}
+                >
+                  {active ? 'ON' : 'OFF'}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
         <div className="mt-6 h-[340px] sm:h-[420px]">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={overlayData} margin={{ top: 24, right: 24, bottom: 18, left: 10 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis dataKey="date" tickLine={false} axisLine={false} tick={{ fill: '#64748b', fontSize: 11 }} tickFormatter={formatMonth} minTickGap={24} />
+              <XAxis
+                dataKey="date"
+                tickLine={false}
+                axisLine={false}
+                tick={{ fill: '#64748b', fontSize: 11 }}
+                tickFormatter={formatMonth}
+                minTickGap={24}
+              />
               <YAxis tickLine={false} axisLine={false} tick={{ fill: '#64748b', fontSize: 11 }} />
-              <Tooltip contentStyle={{ borderRadius: 10, borderColor: '#e2e8f0', backgroundColor: '#fff' }} formatter={(value: number) => `${value.toFixed(1)}%`} />
+              <Tooltip
+                contentStyle={{ borderRadius: 10, borderColor: '#e2e8f0', backgroundColor: '#fff' }}
+                formatter={(value: number) => `${value.toFixed(1)}%`}
+              />
               <Legend verticalAlign="top" height={40} />
               <Line dataKey="actual" name="Histórico" stroke="var(--chart-ink)" strokeWidth={2} dot={false} />
-              {visibleModels.includes('ARIMA') && <Line dataKey="arima" name="ARIMA" stroke="#4f46e5" dot={false} />}
-              {visibleModels.includes('CC-VAR') && <Line dataKey="ccvar" name="CC-VAR" stroke="#0ea5e9" dot={false} />}
-              {visibleModels.includes('Ridge') && <Line dataKey="ridge" name="Ridge" stroke="#14b8a6" dot={false} />}
-              {visibleModels.includes('LightGBM') && <Line dataKey="lgbm" name="LightGBM" stroke="#d97706" dot={false} />}
+              {visibleModels.includes('ARIMA') && <Line dataKey="arima" name="ARIMA" stroke={MODEL_ACCENTS.ARIMA} dot={false} />}
+              {visibleModels.includes('CC-VAR') && <Line dataKey="ccvar" name="CC-VAR" stroke={MODEL_ACCENTS['CC-VAR']} dot={false} />}
+              {visibleModels.includes('Ridge') && <Line dataKey="ridge" name="Ridge" stroke={MODEL_ACCENTS.Ridge} dot={false} />}
+              {visibleModels.includes('LightGBM') && <Line dataKey="lgbm" name="LightGBM" stroke={MODEL_ACCENTS.LightGBM} dot={false} />}
               {hasReferenceDate ? <ReferenceLine x={MODELS_REFERENCE_DATE} stroke="#64748b" strokeDasharray="3 3" label="Treino" /> : null}
             </LineChart>
           </ResponsiveContainer>
@@ -225,7 +275,7 @@ export default function ModelsPage() {
                       />
                       <YAxis dataKey={model} name="Resíduo" tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} />
                       <Tooltip formatter={(value: number) => `${value.toFixed(2)}%`} cursor={{ strokeDasharray: '3 3' }} />
-                      <Scatter data={residualData} fill={model === 'LightGBM' ? '#d97706' : model === 'Ridge' ? '#14b8a6' : model === 'ARIMA' ? '#4f46e5' : '#0ea5e9'} name={model} />
+                      <Scatter data={residualData} fill={MODEL_ACCENTS[model]} name={model} />
                     </ScatterChart>
                   </ResponsiveContainer>
                 </div>

@@ -247,13 +247,22 @@ class ForecastingService:
 
         predictions: list[float] = []
         for date_value in future_data.index:
-            feature_frame = self._build_ml_feature_frame(
-                model_name,
-                combined,
-                loaded.artifact.feature_names_,
-                target_series=target_series,
-            )
-            row = feature_frame.loc[[date_value]]
+            if model_name == "LightGBM":
+                # LightGBM future inference must reuse the same preprocessor path
+                # as historical predict(), otherwise the generated feature space
+                # diverges from what the estimator expects.
+                working_panel = combined.copy()
+                working_panel[TARGET_COL] = target_series
+                feature_frame = loaded.artifact._prepare_predict_features(working_panel)
+                row = feature_frame.loc[[date_value]]
+            else:
+                feature_frame = self._build_ml_feature_frame(
+                    model_name,
+                    combined,
+                    loaded.artifact.feature_names_,
+                    target_series=target_series,
+                )
+                row = feature_frame.loc[[date_value]]
             prediction = float(loaded.artifact.forecast(row, steps=1)[0])
             predictions.append(prediction)
             target_series.loc[date_value] = prediction
