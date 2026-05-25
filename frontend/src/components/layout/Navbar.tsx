@@ -36,10 +36,12 @@ const modelDescriptions: Record<ModelKey, string> = {
 function ModelSelector({
   selectedModel,
   onChange,
+  onSelect,
   mobile = false,
 }: {
   selectedModel: ModelKey;
   onChange: (model: ModelKey) => void;
+  onSelect?: () => void;
   mobile?: boolean;
 }) {
   const [open, setOpen] = useState(false);
@@ -96,6 +98,7 @@ function ModelSelector({
                   onClick={() => {
                     onChange(option);
                     setOpen(false);
+                    onSelect?.();
                   }}
                   className={`flex w-full items-center justify-between gap-3 rounded-xl px-3 py-3 text-left transition ${
                     active
@@ -275,7 +278,10 @@ export function Navbar() {
                         <button
                           key={option}
                           type="button"
-                          onClick={() => setHorizon(option)}
+                          onClick={() => {
+                            setHorizon(option);
+                            setMobileOpen(false);
+                          }}
                           className={`rounded-2xl px-3 py-3 text-sm font-semibold transition ${
                             forecastHorizon === option
                               ? 'bg-indigo-600 text-white'
@@ -290,7 +296,7 @@ export function Navbar() {
                   </div>
 
                   <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
-                    <ModelSelector selectedModel={selectedModel} onChange={setModel} mobile />
+                    <ModelSelector selectedModel={selectedModel} onChange={setModel} onSelect={() => setMobileOpen(false)} mobile />
                   </div>
                 </div>
               </div>
