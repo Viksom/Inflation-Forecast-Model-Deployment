@@ -7,26 +7,13 @@ ModelKey = Literal["ARIMA", "CC-VAR", "Ridge", "LightGBM"]
 MlModelKey = Literal["Ridge", "LightGBM"]
 HorizonKey = Literal["1M", "3M", "12M"]
 ScenarioKey = Literal["Baseline", "Optimistic", "Pessimistic", "Energy Shock", "Monetary Tightening", "Custom"]
-ScenarioVariableKey = Literal["hicp", "coreInflation", "ppi", "epu", "consumerConfidence"]
-
-
-class ScenarioVariables(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    hicp: float = 0.0
-    coreInflation: float = 0.0
-    ppi: float = 0.0
-    epu: float = 0.0
-    consumerConfidence: float = 0.0
-
-
 class ScenarioSimulationRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     model: str
     horizon: HorizonKey = "3M"
     scenarioKey: ScenarioKey = "Custom"
-    variables: ScenarioVariables | None = None
+    variables: dict[str, float] | None = None
 
 
 class InflationDataPoint(BaseModel):
@@ -60,11 +47,11 @@ class ScenarioPreset(BaseModel):
     key: ScenarioKey
     label: str
     description: str
-    values: ScenarioVariables
+    values: dict[str, float]
 
 
 class ScenarioControl(BaseModel):
-    key: ScenarioVariableKey
+    key: str = Field(min_length=1)
     label: str
     min: float
     max: float

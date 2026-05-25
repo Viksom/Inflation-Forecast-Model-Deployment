@@ -7,7 +7,7 @@ import pandas as pd
 from app.core.settings import (
     FEATURE_MAP_PATH,
     MODEL_METRICS_PATH,
-    SCENARIO_OVERRIDE_MAP,
+    SCENARIO_MODEL_CONFIG,
     SCENARIO_PRESETS_PATH,
     TARGET_COL,
     VARIABLE_SETS_PATH,
@@ -45,25 +45,30 @@ def validate_configs(
         if feature_name not in raw_columns:
             raise ValueError(f"feature_map.json references missing column: {feature_name}")
 
-    for abstract_key, feature_name in SCENARIO_OVERRIDE_MAP.items():
-        if feature_name not in feature_map:
-            raise ValueError(f"SCENARIO_OVERRIDE_MAP[{abstract_key}] is missing from feature_map.json")
-        if feature_name not in raw_columns:
-            raise ValueError(f"SCENARIO_OVERRIDE_MAP[{abstract_key}] references missing column {feature_name}")
+    for model_name, config in SCENARIO_MODEL_CONFIG.items():
+        for control in config.get("controls", []):
+            feature_name = control["feature"]
+            if feature_name not in feature_map:
+                raise ValueError(f"Scenario control {control['key']} for {model_name} is missing from feature_map.json")
+            if feature_name not in raw_columns:
+                raise ValueError(f"Scenario control {control['key']} for {model_name} references missing column {feature_name}")
 
-    for scenario_name, scenario in scenario_presets.items():
-        shocks = scenario.get("shocks", {})
-        if not isinstance(shocks, dict):
-            raise ValueError(f"Scenario {scenario_name} must define shocks as an object")
-        for feature_name, shock in shocks.items():
-            validate_feature_reference(
-                feature_name,
-                raw_columns=raw_columns,
-                feature_map=feature_map,
-                require_label=True,
-            )
-            if not isinstance(shock, (int, float)):
-                raise ValueError(f"Scenario {scenario_name} shock for {feature_name} must be numeric")
+    for model_name, presets in scenario_presets.items():
+        if model_name not in SCENARIO_MODEL_CONFIG:
+            raise ValueError(f"scenario_presets.json references unsupported model: {model_name}")
+        for scenario_name, scenario in presets.items():
+            shocks = scenario.get("shocks", {})
+            if not isinstance(shocks, dict):
+                raise ValueError(f"Scenario {scenario_name} for {model_name} must define shocks as an object")
+            for feature_name, shock in shocks.items():
+                validate_feature_reference(
+                    feature_name,
+                    raw_columns=raw_columns,
+                    feature_map=feature_map,
+                    require_label=True,
+                )
+                if not isinstance(shock, (int, float)):
+                    raise ValueError(f"Scenario {scenario_name} shock for {feature_name} in {model_name} must be numeric")
 
     for set_name, features in variable_sets.items():
         for feature_name in features:

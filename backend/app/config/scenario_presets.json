@@ -1,50 +1,106 @@
 {
-  "Baseline": {
-    "description": "Historical trends continue",
-    "shocks": {}
-  },
-
-  "Optimistic": {
-    "description": "Lower inflationary pressure and stronger confidence",
-    "shocks": {
-      "HICPOV_PT_ea-md": -0.8,
-      "HICPNG_PT_ea-md": -0.3,
-      "PPIPT_ppi": -3,
-      "epu_pt_epu": -20,
-      "CCI_PT_ea-md": 12
+  "Ridge": {
+    "Baseline": {
+      "description": "Historical trends continue",
+      "shocks": {}
+    },
+    "Optimistic": {
+      "description": "Lower inflationary pressure and stronger confidence",
+      "shocks": {
+        "HICPOV_PT_ea-md": -0.8,
+        "HICPNG_PT_ea-md": -0.3,
+        "PPIPT_ppi": -3,
+        "epu_pt_epu": -20,
+        "CCI_PT_ea-md": 12
+      }
+    },
+    "Pessimistic": {
+      "description": "Persistent supply shocks and weak confidence",
+      "shocks": {
+        "HICPOV_PT_ea-md": 1.2,
+        "HICPNG_PT_ea-md": 0.8,
+        "PPIPT_ppi": 4,
+        "epu_pt_epu": 35,
+        "CCI_PT_ea-md": -15
+      }
+    },
+    "Energy Shock": {
+      "description": "Oil and producer price shock",
+      "shocks": {
+        "PPIPT_ppi": 8,
+        "HICPOV_PT_ea-md": 1.8,
+        "HICPNG_PT_ea-md": 0.6,
+        "epu_pt_epu": 18,
+        "CCI_PT_ea-md": -10
+      }
+    },
+    "Monetary Tightening": {
+      "description": "Higher rates and weaker credit conditions",
+      "shocks": {
+        "HICPOV_PT_ea-md": 0.5,
+        "HICPNG_PT_ea-md": 0.3,
+        "PPIPT_ppi": 2,
+        "epu_pt_epu": 10,
+        "CCI_PT_ea-md": -8
+      }
     }
   },
-
-  "Pessimistic": {
-    "description": "Persistent supply shocks and weak confidence",
-    "shocks": {
-      "HICPOV_PT_ea-md": 1.2,
-      "HICPNG_PT_ea-md": 0.8,
-      "PPIPT_ppi": 4,
-      "epu_pt_epu": 35,
-      "CCI_PT_ea-md": -15
-    }
-  },
-
-  "Energy Shock": {
-    "description": "Oil and producer price shock",
-    "shocks": {
-      "PPIPT_ppi": 8,
-      "HICPOV_PT_ea-md": 1.8,
-      "HICPNG_PT_ea-md": 0.6,
-      "epu_pt_epu": 18,
-      "CCI_PT_ea-md": -10
-    }
-  },
-
-  "Monetary Tightening": {
-    "description": "Higher rates and weaker credit conditions",
-    "shocks": {
-      "HICPOV_PT_ea-md": 0.5,
-      "HICPNG_PT_ea-md": 0.3,
-      "PPIPT_ppi": 2,
-      "epu_pt_epu": 10,
-      "CCI_PT_ea-md": -8
+  "LightGBM": {
+    "Baseline": {
+      "description": "Historical trends continue",
+      "shocks": {}
+    },
+    "Optimistic": {
+      "description": "Lower uncertainty, stronger output and firmer confidence",
+      "shocks": {
+        "epu_pt_epu": -20,
+        "ULCIN_PT_ea-qd": -1.0,
+        "EXPGS_PT_ea-qd": 4,
+        "IMPGS_PT_ea-qd": 2,
+        "CCI_PT_ea-md": 12,
+        "GDP_PT_ea-qd": 3,
+        "UNETOT_PT_ea-md": -0.8,
+        "PPIPT_ppi": -2
+      }
+    },
+    "Pessimistic": {
+      "description": "Weaker activity, higher uncertainty and cost pressure",
+      "shocks": {
+        "epu_pt_epu": 35,
+        "ULCIN_PT_ea-qd": 1.5,
+        "EXPGS_PT_ea-qd": -5,
+        "IMPGS_PT_ea-qd": -3,
+        "CCI_PT_ea-md": -15,
+        "GDP_PT_ea-qd": -4,
+        "UNETOT_PT_ea-md": 1.2,
+        "PPIPT_ppi": 4
+      }
+    },
+    "Energy Shock": {
+      "description": "Imported cost shock with weaker confidence",
+      "shocks": {
+        "epu_pt_epu": 18,
+        "ULCIN_PT_ea-qd": 0.8,
+        "EXPGS_PT_ea-qd": -2,
+        "IMPGS_PT_ea-qd": 3,
+        "CCI_PT_ea-md": -10,
+        "GDP_PT_ea-qd": -1.5,
+        "UNETOT_PT_ea-md": 0.6,
+        "PPIPT_ppi": 8
+      }
+    },
+    "Monetary Tightening": {
+      "description": "Tighter demand, softer imports and slower output",
+      "shocks": {
+        "epu_pt_epu": 10,
+        "ULCIN_PT_ea-qd": -0.4,
+        "EXPGS_PT_ea-qd": -1.5,
+        "IMPGS_PT_ea-qd": -2.5,
+        "CCI_PT_ea-md": -8,
+        "GDP_PT_ea-qd": -2.5,
+        "UNETOT_PT_ea-md": 0.9,
+        "PPIPT_ppi": 1.5
+      }
     }
   }
 }

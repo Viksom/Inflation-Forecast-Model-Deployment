@@ -14,42 +14,12 @@ from app.core.settings import (
     MODEL_FIELD_MAP,
     NAIVE_BASELINE_MAE,
     NAIVE_BASELINE_RMSE,
-    SCENARIO_OVERRIDE_MAP,
+    SCENARIO_MODEL_CONFIG,
     TARGET_COL,
 )
 from app.services.context import ApplicationContext
 from app.utils.features import parse_feature_name, translate_feature
 from app.utils.json import finite_float
-
-
-PREPARED_COLUMNS = [
-    "PCEPI_fred-md",
-    "HICPOV_PT_ea-md",
-    "HICPNG_PT_ea-md",
-    "HICPSV_PT_ea-md",
-    "EXPGS_PT_ea-qd",
-    "PPIPT_ppi",
-    "epu_pt_epu",
-    "HICPNEF_PT_ea-md",
-    "CCI_PT_ea-md",
-    TARGET_COL,
-]
-
-SCENARIO_FRONTEND_FIELD_MAP = {
-    "hicp": "hicp",
-    "core_inflation": "coreInflation",
-    "ppi": "ppi",
-    "epu": "epu",
-    "consumer_confidence": "consumerConfidence",
-}
-
-SCENARIO_CONTROL_SPECS = [
-    {"abstract_key": "hicp", "key": "hicp", "min": -5, "max": 5, "step": 0.1, "decimals": 1},
-    {"abstract_key": "core_inflation", "key": "coreInflation", "min": -3, "max": 3, "step": 0.1, "decimals": 1},
-    {"abstract_key": "ppi", "key": "ppi", "min": -10, "max": 10, "step": 0.5, "decimals": 1},
-    {"abstract_key": "epu", "key": "epu", "min": -50, "max": 50, "step": 1, "decimals": 0},
-    {"abstract_key": "consumer_confidence", "key": "consumerConfidence", "min": -20, "max": 20, "step": 1, "decimals": 0},
-]
 
 
 class ForecastingService:
@@ -165,23 +135,24 @@ class ForecastingService:
             )
         return result
 
-    def scenario_presets(self) -> list[dict[str, Any]]:
+    def scenario_presets(self, model_name: str) -> list[dict[str, Any]]:
+        model_presets = self.context.scenario_presets.get(model_name, {})
         presets = []
-        for key, preset in self.context.scenario_presets.items():
+        for key, preset in model_presets.items():
             presets.append(
                 {
                     "key": key,
                     "label": key,
                     "description": preset.get("description", ""),
-                    "values": self._shocks_to_frontend_values(preset.get("shocks", {})),
+                    "values": self._shocks_to_frontend_values(model_name, preset.get("shocks", {})),
                 }
             )
         return presets
 
-    def scenario_controls(self) -> list[dict[str, Any]]:
+    def scenario_controls(self, model_name: str) -> list[dict[str, Any]]:
         controls = []
-        for spec in SCENARIO_CONTROL_SPECS:
-            feature_name = SCENARIO_OVERRIDE_MAP[spec["abstract_key"]]
+        for spec in self._scenario_model_controls(model_name):
+            feature_name = spec["feature"]
             controls.append(
                 {
                     "key": spec["key"],
@@ -208,7 +179,7 @@ class ForecastingService:
             raise HTTPException(status_code=422, detail="ARIMA/CC-VAR models do not support scenario requests")
 
         steps = self.horizon_steps(horizon)
-        shocks = self._resolve_scenario_shocks(scenario_key=scenario_key, variables=variables)
+        shocks = self._resolve_scenario_shocks(model_name=model_name, scenario_key=scenario_key, variables=variables)
         baseline_future = self.build_future_data(steps)
         scenario_future = self.build_future_data(steps, shocks=shocks)
 
@@ -259,9 +230,8 @@ class ForecastingService:
         if model_name == "CC-VAR":
             return loaded.artifact.historical_predictions(self.context.raw_data[TARGET_COL])
 
-        feature_frame = self._build_ml_feature_frame(self.context.raw_data, loaded.artifact.feature_names_)
-        values = loaded.artifact.predict(feature_frame)
-        return pd.Series(values, index=feature_frame.index, name=model_name)
+        values = loaded.artifact.predict(self.context.raw_data)
+        return pd.Series(values, index=self.context.raw_data.index, name=model_name)
 
     def _forecast_future(self, model_name: str, future_data: pd.DataFrame) -> pd.Series:
         loaded = self.context.models[model_name]
@@ -273,15 +243,14 @@ class ForecastingService:
     def _forecast_ml_future(self, model_name: str, future_data: pd.DataFrame) -> pd.Series:
         loaded = self.context.models[model_name]
         combined = pd.concat([self.context.raw_data, future_data], axis=0)
-        prepared = self._prepared_ml_panel(combined)
-        target_series = prepared[TARGET_COL].copy()
+        target_series = combined[TARGET_COL].copy()
 
         predictions: list[float] = []
         for date_value in future_data.index:
             feature_frame = self._build_ml_feature_frame(
+                model_name,
                 combined,
                 loaded.artifact.feature_names_,
-                prepared_panel=prepared,
                 target_series=target_series,
             )
             row = feature_frame.loc[[date_value]]
@@ -293,13 +262,13 @@ class ForecastingService:
 
     def _build_ml_feature_frame(
         self,
+        model_name: str,
         panel: pd.DataFrame,
         feature_names: list[str] | pd.Index,
         *,
-        prepared_panel: pd.DataFrame | None = None,
         target_series: pd.Series | None = None,
     ) -> pd.DataFrame:
-        prepared = prepared_panel if prepared_panel is not None else self._prepared_ml_panel(panel)
+        prepared = self._prepare_ml_panel(model_name, panel, feature_names, target_series=target_series)
         target_values = target_series if target_series is not None else prepared[TARGET_COL]
         feature_frame = pd.DataFrame(index=prepared.index)
 
@@ -316,49 +285,72 @@ class ForecastingService:
 
         return feature_frame.ffill().bfill()
 
-    def _prepared_ml_panel(self, panel: pd.DataFrame) -> pd.DataFrame:
-        input_columns = list(self.context.preprocessor.feature_names_in_)
-        missing = [column for column in input_columns if column not in panel.columns]
+    def _prepare_ml_panel(
+        self,
+        model_name: str,
+        panel: pd.DataFrame,
+        feature_names: list[str] | pd.Index,
+        *,
+        target_series: pd.Series | None = None,
+    ) -> pd.DataFrame:
+        if model_name == "Ridge":
+            input_columns = list(self.context.preprocessor.feature_names_in_)
+            missing = [column for column in input_columns if column not in panel.columns]
+            if missing:
+                raise HTTPException(status_code=500, detail=f"Missing model input columns: {missing}")
+
+            levels = panel[input_columns].copy().interpolate(method="linear", limit_direction="both").ffill().bfill()
+            if target_series is not None:
+                levels[TARGET_COL] = target_series.reindex(levels.index)
+            transformed = self.context.preprocessor.transform(levels)
+            return pd.DataFrame(transformed, index=levels.index, columns=input_columns)
+
+        required_columns = {
+            parse_feature_name(str(feature_name)).base_name
+            for feature_name in list(feature_names)
+        }
+        missing = [column for column in sorted(required_columns) if column not in panel.columns]
         if missing:
             raise HTTPException(status_code=500, detail=f"Missing model input columns: {missing}")
 
-        levels = panel[input_columns].copy()
-        levels = levels.interpolate(method="linear", limit_direction="both").ffill().bfill()
-        transformed = self.context.preprocessor.transform(levels)
-        return pd.DataFrame(transformed, index=levels.index, columns=PREPARED_COLUMNS)
+        prepared = panel[list(required_columns)].copy().interpolate(method="linear", limit_direction="both").ffill().bfill()
+        if target_series is not None and TARGET_COL in prepared.columns:
+            prepared[TARGET_COL] = target_series.reindex(prepared.index)
+        return prepared
 
-    def _resolve_scenario_shocks(self, *, scenario_key: str, variables: dict[str, float] | None) -> dict[str, float]:
+    def _resolve_scenario_shocks(self, *, model_name: str, scenario_key: str, variables: dict[str, float] | None) -> dict[str, float]:
         if variables is not None:
-            return self._frontend_values_to_shocks(variables)
+            return self._frontend_values_to_shocks(model_name, variables)
 
         if scenario_key == "Custom":
-            return self._frontend_values_to_shocks({})
+            return self._frontend_values_to_shocks(model_name, {})
 
-        if scenario_key not in self.context.scenario_presets:
-            raise HTTPException(status_code=422, detail=f"Invalid scenario: {scenario_key}")
+        model_presets = self.context.scenario_presets.get(model_name, {})
+        if scenario_key not in model_presets:
+            raise HTTPException(status_code=422, detail=f"Invalid scenario for {model_name}: {scenario_key}")
 
         return {
             str(feature_name): float(value)
-            for feature_name, value in self.context.scenario_presets[scenario_key].get("shocks", {}).items()
+            for feature_name, value in model_presets[scenario_key].get("shocks", {}).items()
         }
 
-    def _frontend_values_to_shocks(self, values: dict[str, float]) -> dict[str, float]:
-        shocks = {}
-        reverse_field_map = {frontend_key: abstract_key for abstract_key, frontend_key in SCENARIO_FRONTEND_FIELD_MAP.items()}
-        for frontend_key, abstract_key in reverse_field_map.items():
-            feature_name = SCENARIO_OVERRIDE_MAP[abstract_key]
-            shocks[feature_name] = float(values.get(frontend_key, 0.0))
-        return shocks
+    def _frontend_values_to_shocks(self, model_name: str, values: dict[str, float]) -> dict[str, float]:
+        return {
+            spec["feature"]: float(values.get(spec["key"], 0.0))
+            for spec in self._scenario_model_controls(model_name)
+        }
 
-    def _shocks_to_frontend_values(self, shocks: dict[str, float]) -> dict[str, float]:
-        reverse_map = {feature_name: key for key, feature_name in SCENARIO_OVERRIDE_MAP.items()}
-        values = {frontend_name: 0.0 for frontend_name in SCENARIO_FRONTEND_FIELD_MAP.values()}
-        for feature_name, shock in shocks.items():
-            abstract_key = reverse_map.get(feature_name)
-            if abstract_key is None:
-                continue
-            values[SCENARIO_FRONTEND_FIELD_MAP[abstract_key]] = float(shock)
+    def _shocks_to_frontend_values(self, model_name: str, shocks: dict[str, float]) -> dict[str, float]:
+        values = {spec["key"]: 0.0 for spec in self._scenario_model_controls(model_name)}
+        for spec in self._scenario_model_controls(model_name):
+            values[spec["key"]] = float(shocks.get(spec["feature"], 0.0))
         return values
+
+    def _scenario_model_controls(self, model_name: str) -> list[dict[str, Any]]:
+        try:
+            return SCENARIO_MODEL_CONFIG[model_name]["controls"]
+        except KeyError as exc:
+            raise HTTPException(status_code=422, detail=f"Scenario configuration unavailable for model: {model_name}") from exc
 
     def _series_records(self, series: pd.Series) -> list[dict[str, float | str | None]]:
         return [

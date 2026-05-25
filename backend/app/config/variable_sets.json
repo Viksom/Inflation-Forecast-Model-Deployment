@@ -1,5 +1,5 @@
 {
-  "ML_features": [
+  "Ridge_features": [
     "HICPOV_PT_ea-md",
     "HICPNG_PT_ea-md",
     "HICPNEF_PT_ea-md",
@@ -10,13 +10,13 @@
     "EXPGS_PT_ea-qd"
   ],
 
-  "VAR_features": [
+  "LightGBM_features": [
     "epu_pt_epu", 
-    "GDP_PT_ea-qd", 
     "ULCIN_PT_ea-qd", 
     "EXPGS_PT_ea-qd", 
     "IMPGS_PT_ea-qd", 
     "CCI_PT_ea-md", 
+    "GDP_PT_ea-qd", 
     "UNETOT_PT_ea-md", 
     "PPIPT_ppi"
   ]

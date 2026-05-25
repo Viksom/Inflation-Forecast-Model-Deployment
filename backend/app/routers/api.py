@@ -53,13 +53,19 @@ def feature_importance(
 
 
 @router.get("/scenario-presets", response_model=list[ScenarioPreset])
-def scenario_presets(context: Annotated[ApplicationContext, Depends(get_context)]):
-    return json_safe(ForecastingService(context).scenario_presets())
+def scenario_presets(
+    context: Annotated[ApplicationContext, Depends(get_context)],
+    model: str = "Ridge",
+):
+    return json_safe(ForecastingService(context).scenario_presets(model))
 
 
 @router.get("/scenario-controls", response_model=list[ScenarioControl])
-def scenario_controls(context: Annotated[ApplicationContext, Depends(get_context)]):
-    return json_safe(ForecastingService(context).scenario_controls())
+def scenario_controls(
+    context: Annotated[ApplicationContext, Depends(get_context)],
+    model: str = "Ridge",
+):
+    return json_safe(ForecastingService(context).scenario_controls(model))
 
 
 @router.post("/scenarios/simulate")
@@ -67,20 +73,22 @@ def simulate_scenario(
     payload: ScenarioSimulationRequest,
     context: Annotated[ApplicationContext, Depends(get_context)],
 ):
-    variables = payload.variables.model_dump() if payload.variables is not None else None
     return json_safe(
         ForecastingService(context).simulate_scenario(
             model_name=payload.model,
             horizon=payload.horizon,
             scenario_key=payload.scenarioKey,
-            variables=variables,
+            variables=payload.variables,
         )
     )
 
 
 @router.get("/macro-variables", response_model=list[MacroVariable])
-def macro_variables(context: Annotated[ApplicationContext, Depends(get_context)]):
-    return json_safe(AnalyticsService(context).macro_variables())
+def macro_variables(
+    context: Annotated[ApplicationContext, Depends(get_context)],
+    model: str = "Ridge",
+):
+    return json_safe(AnalyticsService(context).macro_variables(model))
 
 
 @router.get("/target-variable", response_model=MacroVariable)

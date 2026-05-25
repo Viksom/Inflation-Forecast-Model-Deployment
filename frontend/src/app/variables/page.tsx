@@ -16,8 +16,10 @@ import {
 } from 'recharts';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card } from '@/components/ui/card';
+import { LoadingStage } from '@/components/ui/loading-stage';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getCorrelationMatrix, getLagCorrelations, getMacroVariables, getTargetVariable } from '@/lib/api';
+import { useAppStore } from '@/lib/store';
 import { formatMonth } from '@/lib/utils';
 import type { CorrelationMatrix, MacroVariable } from '@/types';
 
@@ -71,13 +73,16 @@ export default function VariablesPage() {
   const [tab, setTab] = useState('time');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const selectedModel = useAppStore((state) => state.selectedModel);
 
   useEffect(() => {
     let cancelled = false;
     const load = () => {
       setLoading(true);
 
-      Promise.all([getMacroVariables(), getTargetVariable(), getCorrelationMatrix()])
+      const variablesModel = selectedModel === 'LightGBM' ? 'LightGBM' : 'Ridge';
+
+      Promise.all([getMacroVariables(variablesModel), getTargetVariable(), getCorrelationMatrix()])
         .then(([variables, target, matrix]) => {
           if (cancelled) return;
           setMacroVariables(variables);
@@ -106,7 +111,7 @@ export default function VariablesPage() {
       window.removeEventListener('focus', load);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
-  }, []);
+  }, [selectedModel]);
 
   useEffect(() => {
     if (!selectedVariable) return;
@@ -151,7 +156,8 @@ export default function VariablesPage() {
   );
 
   return (
-    <section className="mx-auto max-w-screen-2xl px-4 pb-10 sm:px-6 lg:px-8">
+    <section className="relative mx-auto max-w-screen-2xl px-4 pb-10 sm:px-6 lg:px-8">
+      {loading ? <LoadingStage label="A abrir o explorador" detail="A carregar variáveis, correlações e defasagens." /> : null}
       <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <p className="text-sm uppercase tracking-[0.3em] text-slate-500">Variáveis</p>

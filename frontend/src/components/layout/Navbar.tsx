@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -25,6 +25,102 @@ const navItems = [
 
 const modelOptions: ModelKey[] = ['ARIMA', 'CC-VAR', 'Ridge', 'LightGBM'];
 const horizonOptions = ['1M', '3M', '12M'] as const;
+
+const modelDescriptions: Record<ModelKey, string> = {
+  ARIMA: 'Modelo clássico univariado',
+  'CC-VAR': 'Modelo clássico multivariado',
+  Ridge: 'Regressão regularizada',
+  LightGBM: 'Gradient boosting',
+};
+
+function ModelSelector({
+  selectedModel,
+  onChange,
+  mobile = false,
+}: {
+  selectedModel: ModelKey;
+  onChange: (model: ModelKey) => void;
+  mobile?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return undefined;
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!containerRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    return () => document.removeEventListener('mousedown', handlePointerDown);
+  }, [open]);
+
+  return (
+    <div ref={containerRef} className={`relative ${mobile ? 'w-full' : 'min-w-[240px]'}`}>
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        className={`flex w-full items-center justify-between gap-3 rounded-2xl border border-base bg-slate-50 px-4 py-3 text-left transition hover:border-indigo-400 hover:bg-white dark:bg-slate-900 dark:hover:bg-slate-950 ${
+          mobile ? 'dark:border-slate-700' : ''
+        }`}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label="Selecionar modelo"
+      >
+        <div className="min-w-0">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
+            Modelo
+          </div>
+          <div className="mt-1 truncate text-sm font-semibold text-slate-900 dark:text-slate-100">{selectedModel}</div>
+        </div>
+        <ChevronDown size={16} className={`shrink-0 text-slate-400 transition ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {open ? (
+        <div
+          className={`mt-2 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_24px_60px_-32px_rgba(15,23,42,0.45)] dark:border-slate-700 dark:bg-slate-950 ${
+            mobile ? 'relative' : 'absolute right-0 z-50 w-[280px]'
+          }`}
+          role="listbox"
+        >
+          <div className={`overflow-y-auto p-2 ${mobile ? 'max-h-64' : 'max-h-[min(18rem,calc(100vh-9rem))]'}`}>
+            {modelOptions.map((option) => {
+              const active = option === selectedModel;
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => {
+                    onChange(option);
+                    setOpen(false);
+                  }}
+                  className={`flex w-full items-center justify-between gap-3 rounded-xl px-3 py-3 text-left transition ${
+                    active
+                      ? 'bg-indigo-600 text-white'
+                      : 'text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-900'
+                  }`}
+                  role="option"
+                  aria-selected={active}
+                >
+                  <div className="min-w-0">
+                    <div className="font-semibold">{option}</div>
+                    <div className={`mt-1 text-xs ${active ? 'text-indigo-100' : 'text-slate-500 dark:text-slate-400'}`}>
+                      {modelDescriptions[option]}
+                    </div>
+                  </div>
+                  <span className={`h-2.5 w-2.5 rounded-full ${active ? 'bg-white' : 'bg-slate-300 dark:bg-slate-600'}`} />
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 export function Navbar() {
   const pathname = usePathname();
@@ -93,19 +189,7 @@ export function Navbar() {
                 ))}
               </div>
 
-              <label className="relative inline-flex items-center rounded-full border border-base bg-slate-50 px-3 text-sm text-slate-700 dark:bg-slate-900 dark:text-slate-200">
-                <span className="mr-2 text-xs uppercase tracking-[0.15em] text-slate-500">Modelo</span>
-                <select
-                  value={selectedModel}
-                  onChange={(event) => setModel(event.target.value as ModelKey)}
-                  className="appearance-none bg-transparent py-1 pl-1 pr-6 text-sm font-medium text-slate-900 outline-none dark:text-slate-100 dark:[color-scheme:dark]"
-                  aria-label="Selecionar modelo"
-                >
-                  {modelOptions.map((option) => (
-                    <option key={option} value={option}>{option}</option>
-                  ))}
-                </select>
-              </label>
+              <ModelSelector selectedModel={selectedModel} onChange={setModel} />
             </div>
 
             <ThemeToggle />
@@ -134,7 +218,7 @@ export function Navbar() {
             aria-label="Fechar menu"
             onClick={() => setMobileOpen(false)}
           />
-          <div className="absolute inset-x-0 top-full z-40 border-b border-base bg-[linear-gradient(180deg,rgba(248,250,252,0.98),rgba(241,245,249,0.98))] shadow-2xl dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.98),rgba(17,24,39,0.98))]">
+          <div className="absolute inset-x-0 top-full z-40 max-h-[calc(100vh-73px)] overflow-y-auto border-b border-base bg-[linear-gradient(180deg,rgba(248,250,252,0.98),rgba(241,245,249,0.98))] shadow-2xl dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.98),rgba(17,24,39,0.98))]">
             <div className="mx-auto max-w-screen-2xl px-4 pb-5 pt-3 sm:px-6">
               <div className="rounded-[28px] border border-slate-200/80 bg-white/90 p-3 shadow-[0_24px_60px_-32px_rgba(15,23,42,0.45)] dark:border-slate-700/80 dark:bg-slate-950/85">
                 <div className="flex items-center justify-between rounded-2xl bg-slate-100/80 px-4 py-3 dark:bg-slate-900/80">
@@ -205,24 +289,9 @@ export function Navbar() {
                     </div>
                   </div>
 
-                  <label className="rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
-                    <span className="mb-3 block text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
-                      Modelo
-                    </span>
-                    <div className="relative rounded-2xl bg-white px-3 dark:bg-slate-950">
-                      <select
-                        value={selectedModel}
-                        onChange={(event) => setModel(event.target.value as ModelKey)}
-                        className="block min-w-0 w-full appearance-none bg-transparent py-3 pr-8 text-sm font-medium text-slate-900 outline-none dark:text-slate-100 dark:[color-scheme:dark]"
-                        aria-label="Selecionar modelo"
-                      >
-                        {modelOptions.map((option) => (
-                          <option key={option} value={option}>{option}</option>
-                        ))}
-                      </select>
-                      <ChevronDown size={16} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                    </div>
-                  </label>
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
+                    <ModelSelector selectedModel={selectedModel} onChange={setModel} mobile />
+                  </div>
                 </div>
               </div>
             </div>

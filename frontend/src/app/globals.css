@@ -66,6 +66,90 @@ select option {
   min-height: 100vh;
 }
 
+@keyframes loadingPulseBar {
+  0%,
+  100% {
+    transform: scaleY(0.55);
+    opacity: 0.45;
+  }
+  50% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+@keyframes loadingProgressSweep {
+  0% {
+    transform: translateX(-35%) scaleX(0.65);
+    opacity: 0.7;
+  }
+  50% {
+    transform: translateX(15%) scaleX(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(45%) scaleX(0.8);
+    opacity: 0.75;
+  }
+}
+
+@keyframes loadingOrbFloat {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(0, 12px, 0) scale(1.04);
+  }
+}
+
+@keyframes loadingDotBlink {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes loadingScanMove {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(120%);
+  }
+}
+
+.loading-bar {
+  transform-origin: center bottom;
+  animation: loadingPulseBar 1s ease-in-out infinite;
+}
+
+.loading-progress {
+  animation: loadingProgressSweep 1.6s ease-in-out infinite;
+}
+
+.loading-orb {
+  animation: loadingOrbFloat 5s ease-in-out infinite;
+}
+
+.loading-dot {
+  animation: loadingDotBlink 1.2s ease-in-out infinite;
+}
+
+.loading-scan {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.45), transparent);
+  animation: loadingScanMove 2.4s linear infinite;
+}
+
+.dark .loading-scan {
+  background: linear-gradient(90deg, transparent, rgba(148, 163, 184, 0.16), transparent);
+}
+
 .border-base {
   border-color: var(--border);
 }

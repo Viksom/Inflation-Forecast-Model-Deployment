@@ -15,6 +15,7 @@ import {
 } from 'recharts';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
+import { LoadingStage } from '@/components/ui/loading-stage';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAppStore } from '@/lib/store';
@@ -175,7 +176,8 @@ export default function DashboardPage() {
   const hasReferenceDate = useMemo(() => modelData.some((point) => point.date === DASHBOARD_REFERENCE_DATE), [modelData]);
 
   return (
-    <section className="mx-auto max-w-screen-2xl px-4 pb-10 sm:px-6 lg:px-8">
+    <section className="relative mx-auto max-w-screen-2xl px-4 pb-10 sm:px-6 lg:px-8">
+      {loading ? <LoadingStage label="A compor o painel" detail="A alinhar histórico, previsões e métricas." /> : null}
       {error ? (
         <div className="mb-6 rounded-3xl border border-rose-200 bg-rose-50 p-5 text-sm text-rose-800 dark:border-rose-500/30 dark:bg-rose-950 dark:text-rose-100">
           {error}

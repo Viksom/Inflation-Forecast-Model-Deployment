@@ -20,6 +20,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ModelCard } from '@/components/cards/ModelCard';
+import { LoadingStage } from '@/components/ui/loading-stage';
 import { getCurrentInflation, getInflationSeries, getModelMetrics } from '@/lib/api';
 import { formatMonth, modelToSeriesKey } from '@/lib/utils';
 import type { InflationDataPoint, ModelKey, ModelMetrics, SeriesPoint } from '@/types';
@@ -124,7 +125,8 @@ export default function ModelsPage() {
   }));
 
   return (
-    <section className="mx-auto max-w-screen-2xl px-4 pb-10 sm:px-6 lg:px-8">
+    <section className="relative mx-auto max-w-screen-2xl px-4 pb-10 sm:px-6 lg:px-8">
+      {loading ? <LoadingStage label="A comparar modelos" detail="A reunir previsões, resíduos e desempenho." /> : null}
       <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <p className="text-sm uppercase tracking-[0.3em] text-slate-500">Modelos</p>

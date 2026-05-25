@@ -6,21 +6,10 @@ import pandas as pd
 from fastapi import HTTPException
 from statsmodels.tsa.stattools import acf
 
-from app.core.settings import TARGET_COL
+from app.core.settings import TARGET_COL, VARIABLE_SET_KEY_BY_MODEL
 from app.services.context import ApplicationContext
 from app.utils.features import translate_feature
 from app.utils.json import finite_float
-
-VARIABLE_EXPLORER_KEYS = [
-    "HICPOV_PT_ea-md",
-    "HICPNG_PT_ea-md",
-    "HICPNEF_PT_ea-md",
-    "PPIPT_ppi",
-    "epu_pt_epu",
-    "CCI_PT_ea-md",
-    "PCEPI_fred-md",
-    "EXPGS_PT_ea-qd",
-]
 
 VARIABLE_METADATA = {
     "HICPOV_PT_ea-md": {"unit": "Index", "source": "Eurostat"},
@@ -31,6 +20,10 @@ VARIABLE_METADATA = {
     "CCI_PT_ea-md": {"unit": "Index", "source": "OECD"},
     "PCEPI_fred-md": {"unit": "Index", "source": "FRED"},
     "EXPGS_PT_ea-qd": {"unit": "Index", "source": "Eurostat"},
+    "ULCIN_PT_ea-qd": {"unit": "Index", "source": "Eurostat"},
+    "IMPGS_PT_ea-qd": {"unit": "Index", "source": "Eurostat"},
+    "GDP_PT_ea-qd": {"unit": "Index", "source": "Eurostat"},
+    "UNETOT_PT_ea-md": {"unit": "Index", "source": "Eurostat"},
 }
 
 TARGET_METADATA = {"unit": "%", "source": "Inflation Target"}
@@ -55,11 +48,11 @@ class AnalyticsService:
             for index, value in series.items()
         ]
 
-    def macro_variables(self) -> list[dict[str, Any]]:
+    def macro_variables(self, model_name: str) -> list[dict[str, Any]]:
         variables = []
-        for key in VARIABLE_EXPLORER_KEYS:
+        for key in self._variable_keys_for_model(model_name):
             series = self._filled_series(key)
-            metadata = VARIABLE_METADATA[key]
+            metadata = VARIABLE_METADATA.get(key, {"unit": "Index", "source": "Dataset"})
             variables.append(
                 {
                     "name": translate_feature(key, self.context.feature_map),
@@ -126,6 +119,16 @@ class AnalyticsService:
             return reverse_map[variable]
         except KeyError as exc:
             raise HTTPException(status_code=422, detail=f"Invalid variable: {variable}") from exc
+
+    def _variable_keys_for_model(self, model_name: str) -> list[str]:
+        set_key = VARIABLE_SET_KEY_BY_MODEL.get(model_name)
+        if set_key is None:
+            raise HTTPException(status_code=422, detail=f"Invalid model: {model_name}")
+
+        try:
+            return self.context.variable_sets[set_key]
+        except KeyError as exc:
+            raise HTTPException(status_code=500, detail=f"Missing variable set configuration: {set_key}") from exc
 
     def _filled_series(self, key: str) -> pd.Series:
         if key not in self.context.raw_data.columns:

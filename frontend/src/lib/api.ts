@@ -51,12 +51,14 @@ export function getFeatureImportance(model: ModelKey) {
   return request<FeatureImportance[]>(`/api/feature-importance?${params.toString()}`);
 }
 
-export function getScenarioPresets() {
-  return request<ScenarioPreset[]>('/api/scenario-presets');
+export function getScenarioPresets(model: ModelKey) {
+  const params = new URLSearchParams({ model });
+  return request<ScenarioPreset[]>(`/api/scenario-presets?${params.toString()}`);
 }
 
-export function getScenarioControls() {
-  return request<ScenarioControl[]>('/api/scenario-controls');
+export function getScenarioControls(model: ModelKey) {
+  const params = new URLSearchParams({ model });
+  return request<ScenarioControl[]>(`/api/scenario-controls?${params.toString()}`);
 }
 
 export function simulateScenario(
@@ -71,8 +73,9 @@ export function simulateScenario(
   });
 }
 
-export function getMacroVariables() {
-  return request<MacroVariable[]>('/api/macro-variables');
+export function getMacroVariables(model: ModelKey) {
+  const params = new URLSearchParams({ model });
+  return request<MacroVariable[]>(`/api/macro-variables?${params.toString()}`);
 }
 
 export function getTargetVariable() {

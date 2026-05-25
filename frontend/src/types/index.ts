@@ -27,15 +27,7 @@ export type FeatureImportance = {
   model: 'Ridge' | 'LightGBM';
 };
 
-export type ScenarioVariables = {
-  hicp: number;
-  coreInflation: number;
-  ppi: number;
-  epu: number;
-  consumerConfidence: number;
-};
-
-export type ScenarioVariableKey = keyof ScenarioVariables;
+export type ScenarioVariables = Record<string, number>;
 
 export type AppStore = {
   selectedModel: ModelKey;
@@ -46,7 +38,7 @@ export type AppStore = {
   setHorizon: (horizon: '1M' | '3M' | '12M') => void;
   setScenario: (scenario: AppStore['activeScenario']) => void;
   setScenarioValues: (scenario: AppStore['activeScenario'], values: ScenarioVariables) => void;
-  setScenarioVariable: (key: keyof ScenarioVariables, value: number) => void;
+  setScenarioVariable: (key: string, value: number) => void;
   resetScenario: () => void;
 };
 
@@ -65,7 +57,7 @@ export type ScenarioPreset = {
 };
 
 export type ScenarioControl = {
-  key: ScenarioVariableKey;
+  key: string;
   label: string;
   min: number;
   max: number;

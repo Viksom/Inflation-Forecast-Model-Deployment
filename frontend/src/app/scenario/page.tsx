@@ -6,6 +6,7 @@ import {
   CartesianGrid,
   Line,
   LineChart,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -15,12 +16,15 @@ import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { LoadingStage } from '@/components/ui/loading-stage';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Slider } from '@/components/ui/slider';
 import { useAppStore } from '@/lib/store';
 import { getCurrentInflation, getScenarioControls, getScenarioPresets, simulateScenario } from '@/lib/api';
 import { formatDecimal, formatPercent, formatMonth } from '@/lib/utils';
 import type { ScenarioControl, ScenarioPreset, ScenarioSimulation, SeriesPoint } from '@/types';
+
+const SCENARIO_REFERENCE_DATE = '2025-10';
 
 function formatScenarioLabel(label: string) {
   if (label === 'Baseline') return 'Base';
@@ -60,12 +64,18 @@ export default function ScenarioPage() {
   useEffect(() => {
     let cancelled = false;
     const load = () => {
-      Promise.all([getScenarioPresets(), getScenarioControls(), getCurrentInflation()])
+      const scenarioModel = selectedModel === 'LightGBM' ? 'LightGBM' : 'Ridge';
+
+      Promise.all([getScenarioPresets(scenarioModel), getScenarioControls(scenarioModel), getCurrentInflation()])
         .then(([presets, controls, currentSeries]) => {
           if (cancelled) return;
           setScenarioPresets(presets);
           setScenarioControls(controls);
           setCurrentInflation(currentSeries);
+          const activePreset = presets.find((preset) => preset.key === activeScenario) ?? presets[0] ?? null;
+          if (activePreset && activeScenario !== 'Custom') {
+            setScenarioValues(activePreset.key, activePreset.values);
+          }
         })
         .catch((err: Error) => {
           if (!cancelled) setError(err.message);
@@ -84,7 +94,7 @@ export default function ScenarioPage() {
       window.removeEventListener('focus', load);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
-  }, []);
+  }, [activeScenario, selectedModel, setScenarioValues]);
 
   useEffect(() => {
     if (selectedModel === 'ARIMA' || selectedModel === 'CC-VAR') {
@@ -135,9 +145,14 @@ export default function ScenarioPage() {
     })),
     [scenarioResult],
   );
+  const hasReferenceDate = useMemo(
+    () => scenarioChartData.some((point) => point.date === SCENARIO_REFERENCE_DATE),
+    [scenarioChartData],
+  );
 
   return (
-    <section className="mx-auto max-w-screen-2xl px-4 pb-10 sm:px-6 lg:px-8">
+    <section className="relative mx-auto max-w-screen-2xl px-4 pb-10 sm:px-6 lg:px-8">
+      {loading ? <LoadingStage label="A simular cenários" detail="A calibrar choques, baseline e resposta do modelo." /> : null}
       <div className="mb-6">
         <p className="text-sm uppercase tracking-[0.3em] text-slate-500">Análise de cenário</p>
         <h1 className="mt-2 text-3xl font-semibold text-slate-900 dark:text-slate-100">Simulação de choques macroeconómicos</h1>
@@ -199,13 +214,13 @@ export default function ScenarioPage() {
                   <div key={control.key} className="space-y-2">
                     <div className="flex items-center justify-between gap-3 text-sm font-medium text-slate-700 dark:text-slate-200">
                       <span className="min-w-0 flex-1">{control.label} Delta</span>
-                      <span>{scenarioVariables[control.key].toFixed(control.decimals)}</span>
+                      <span>{(scenarioVariables[control.key] ?? 0).toFixed(control.decimals)}</span>
                     </div>
                     <Slider
                       min={control.min}
                       max={control.max}
                       step={control.step}
-                      value={scenarioVariables[control.key]}
+                      value={scenarioVariables[control.key] ?? 0}
                       onChange={(event) => setScenarioVariable(control.key, Number(event.target.value))}
                     />
                   </div>
@@ -254,6 +269,7 @@ export default function ScenarioPage() {
                       />
                       <Line type="monotone" dataKey="scenario" name="Cenário" stroke="#4f46e5" strokeWidth={3} dot={false} />
                       <Area type="monotone" dataKey="scenario" name="Intervalo" stroke="transparent" fill="rgba(79, 70, 229, 0.12)" />
+                      {hasReferenceDate ? <ReferenceLine x={SCENARIO_REFERENCE_DATE} stroke="#64748b" strokeDasharray="3 3" label="Treino" /> : null}
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
