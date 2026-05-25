@@ -1,6 +1,6 @@
 {
   "ARIMA": { "mae": 0.37, "rmse": 0.52 },
   "CC-VAR": { "mae": 0.39, "rmse": 0.50 },
-  "Ridge": { "mae": 0.31, "rmse": 0.36 },
-  "LightGBM": { "mae": 0.51, "rmse": 0.62 }
+  "Ridge": { "mae": 0.28, "rmse": 0.34 },
+  "LightGBM": { "mae": 0.40, "rmse": 0.48 }
 }

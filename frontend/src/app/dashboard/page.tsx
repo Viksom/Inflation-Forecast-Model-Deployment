@@ -212,9 +212,19 @@ export default function DashboardPage() {
             <Card>
               <p className="text-sm font-medium uppercase tracking-[0.2em] text-slate-500">Melhor modelo</p>
               <p className="mt-4 break-words text-2xl font-semibold text-slate-900 dark:text-slate-100 sm:text-3xl">{bestModel?.model ?? '-'}</p>
-              <div className="mt-4 flex flex-wrap items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-                <Badge variant="outline">RMSE</Badge>
-                <span>{bestModel?.rmse.toFixed(2) ?? '-'}</span>
+              <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-900">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="text-[11px] uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">RMSE</div>
+                    <div className="text-base font-semibold text-slate-900 dark:text-slate-100">{bestModel?.rmse.toFixed(2) ?? '-'}</div>
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-900">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="text-[11px] uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">MAE</div>
+                    <div className="text-base font-semibold text-slate-900 dark:text-slate-100">{bestModel?.mae.toFixed(2) ?? '-'}</div>
+                  </div>
+                </div>
               </div>
             </Card>
             <Card>
