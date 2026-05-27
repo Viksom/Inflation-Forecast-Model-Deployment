@@ -45,6 +45,11 @@ function formatModelCategory(category: string) {
   return category;
 }
 
+function formatRelativeMetric(value: number) {
+  if (typeof value !== 'number' || Number.isNaN(value)) return '-';
+  return `${(value * 100).toFixed(1)}%`;
+}
+
 function ForecastTooltip({ active, payload, label }: { active?: boolean; payload?: any; label?: string }) {
   if (!active || !payload || payload.length === 0) {
     return null;
@@ -125,18 +130,10 @@ export default function DashboardPage() {
         });
     };
 
-    const handleVisibility = () => {
-      if (document.visibilityState === 'visible') load();
-    };
-
     load();
-    window.addEventListener('focus', load);
-    document.addEventListener('visibilitychange', handleVisibility);
 
     return () => {
       cancelled = true;
-      window.removeEventListener('focus', load);
-      document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, [forecastHorizon, selectedModel]);
 
@@ -174,10 +171,11 @@ export default function DashboardPage() {
     [featureImportance, selectedModel],
   );
   const hasReferenceDate = useMemo(() => modelData.some((point) => point.date === DASHBOARD_REFERENCE_DATE), [modelData]);
+  const showLoadingStage = loading && inflationSeries.length === 0 && modelMetrics.length === 0;
 
   return (
     <section className="relative mx-auto max-w-screen-2xl px-4 pb-10 sm:px-6 lg:px-8">
-      {loading ? <LoadingStage label="A compor o painel" detail="A alinhar histórico, previsões e métricas." /> : null}
+      {showLoadingStage ? <LoadingStage label="A compor o painel" detail="A alinhar histórico, previsões e métricas." /> : null}
       {error ? (
         <div className="mb-6 rounded-3xl border border-rose-200 bg-rose-50 p-5 text-sm text-rose-800 dark:border-rose-500/30 dark:bg-rose-950 dark:text-rose-100">
           {error}
@@ -279,31 +277,37 @@ export default function DashboardPage() {
               {Array.from({ length: 4 }).map((_, index) => <Skeleton key={index} className="h-12 rounded-3xl" />)}
             </div>
           ) : (
-            <div className="mt-6 max-w-full overflow-x-auto rounded-3xl border border-slate-200 dark:border-slate-700">
-              <Table className="min-w-[36rem]">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Modelo</TableHead>
-                    <TableHead>RMSE</TableHead>
-                    <TableHead>MAE</TableHead>
-                    <TableHead>RRMSE</TableHead>
-                    <TableHead>RMAE</TableHead>
-                    <TableHead>Categoria</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <tbody>
-                  {modelMetrics.map((model) => (
-                    <TableRow key={model.model} className={model.model === bestModel?.model ? 'bg-indigo-50 font-semibold dark:bg-slate-900' : ''}>
-                      <TableCell>{model.model}</TableCell>
-                      <TableCell>{model.rmse.toFixed(2)}</TableCell>
-                      <TableCell>{model.mae.toFixed(2)}</TableCell>
-                      <TableCell>{model.rrmse.toFixed(2)}</TableCell>
-                      <TableCell>{model.rmae.toFixed(2)}</TableCell>
-                      <TableCell><Badge variant="outline">{formatModelCategory(model.category)}</Badge></TableCell>
+            <div className="mt-6 space-y-3">
+              <div className="max-w-full overflow-x-auto rounded-3xl border border-slate-200 dark:border-slate-700">
+                <Table className="min-w-[36rem]">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Modelo</TableHead>
+                      <TableHead>RMSE</TableHead>
+                      <TableHead>MAE</TableHead>
+                      <TableHead>RRMSE</TableHead>
+                      <TableHead>RMAE</TableHead>
+                      <TableHead>Categoria</TableHead>
                     </TableRow>
-                  ))}
-                </tbody>
-              </Table>
+                  </TableHeader>
+                  <tbody>
+                    {modelMetrics.map((model) => (
+                      <TableRow key={model.model} className={model.model === bestModel?.model ? 'bg-indigo-50 font-semibold dark:bg-slate-900' : ''}>
+                        <TableCell>{model.model}</TableCell>
+                        <TableCell>{model.rmse.toFixed(2)}</TableCell>
+                        <TableCell>{model.mae.toFixed(2)}</TableCell>
+                        <TableCell>{formatRelativeMetric(model.rrmse)}</TableCell>
+                        <TableCell>{formatRelativeMetric(model.rmae)}</TableCell>
+                        <TableCell><Badge variant="outline">{formatModelCategory(model.category)}</Badge></TableCell>
+                      </TableRow>
+                    ))}
+                  </tbody>
+                </Table>
+              </div>
+              <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">
+                RRMSE e RMAE são calculados relativamente a um modelo Naive que usa a média histórica como previsão.
+                100.0% significa desempenho igual ao Naive; abaixo de 100.0% significa melhor desempenho.
+              </p>
             </div>
           )}
         </Card>

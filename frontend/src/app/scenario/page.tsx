@@ -48,6 +48,7 @@ function formatScenarioDescription(label: string, description: string) {
 
 export default function ScenarioPage() {
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [scenarioPresets, setScenarioPresets] = useState<ScenarioPreset[]>([]);
   const [scenarioControls, setScenarioControls] = useState<ScenarioControl[]>([]);
@@ -82,29 +83,27 @@ export default function ScenarioPage() {
         });
     };
 
-    const handleVisibility = () => {
-      if (document.visibilityState === 'visible') load();
-    };
-
     load();
-    window.addEventListener('focus', load);
-    document.addEventListener('visibilitychange', handleVisibility);
     return () => {
       cancelled = true;
-      window.removeEventListener('focus', load);
-      document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, [activeScenario, selectedModel, setScenarioValues]);
 
   useEffect(() => {
     if (selectedModel === 'ARIMA' || selectedModel === 'CC-VAR') {
       setLoading(false);
+      setRefreshing(false);
       setScenarioResult(null);
       return;
     }
 
     let cancelled = false;
-    setLoading(true);
+    const shouldShowLoading = scenarioResult === null;
+    if (shouldShowLoading) {
+      setLoading(true);
+    } else {
+      setRefreshing(true);
+    }
     setError(null);
 
     simulateScenario(selectedModel, forecastHorizon, activeScenario, scenarioVariables)
@@ -115,7 +114,10 @@ export default function ScenarioPage() {
         if (!cancelled) setError(err.message);
       })
       .finally(() => {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          if (shouldShowLoading) setLoading(false);
+          setRefreshing(false);
+        }
       });
 
     return () => {
@@ -149,10 +151,12 @@ export default function ScenarioPage() {
     () => scenarioChartData.some((point) => point.date === SCENARIO_REFERENCE_DATE),
     [scenarioChartData],
   );
+  const showLoadingStage = loading && scenarioResult === null && currentInflation.length === 0;
+  const showInitialScenarioLoading = loading && scenarioResult === null;
 
   return (
     <section className="relative mx-auto max-w-screen-2xl px-4 pb-10 sm:px-6 lg:px-8">
-      {loading ? <LoadingStage label="A simular cenários" detail="A calibrar choques, baseline e resposta do modelo." /> : null}
+      {showLoadingStage ? <LoadingStage label="A simular cenários" detail="A calibrar choques, baseline e resposta do modelo." /> : null}
       <div className="mb-6">
         <p className="text-sm uppercase tracking-[0.3em] text-slate-500">Análise de cenário</p>
         <h1 className="mt-2 text-3xl font-semibold text-slate-900 dark:text-slate-100">Simulação de choques macroeconómicos</h1>
@@ -240,10 +244,16 @@ export default function ScenarioPage() {
                   Modelo: {selectedModel}
                 </div>
               </div>
-              {loading ? (
+              {showInitialScenarioLoading ? (
                 <Skeleton className="h-[340px] sm:h-[420px]" />
               ) : (
-                <div className="h-[340px] sm:h-[420px]">
+                <div className="relative h-[340px] sm:h-[420px]">
+                  {refreshing ? (
+                    <div className="absolute right-3 top-3 z-10 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/90 px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm backdrop-blur dark:border-slate-700 dark:bg-slate-900/90 dark:text-slate-300">
+                      <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-slate-300 border-t-indigo-500 dark:border-slate-600 dark:border-t-indigo-300" />
+                      A atualizar
+                    </div>
+                  ) : null}
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={scenarioChartData} margin={{ top: 24, right: 24, bottom: 18, left: 10 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />

@@ -62,18 +62,10 @@ export default function ModelsPage() {
         });
     };
 
-    const handleVisibility = () => {
-      if (document.visibilityState === 'visible') load();
-    };
-
     load();
-    window.addEventListener('focus', load);
-    document.addEventListener('visibilitychange', handleVisibility);
 
     return () => {
       cancelled = true;
-      window.removeEventListener('focus', load);
-      document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, []);
 
@@ -126,10 +118,11 @@ export default function ModelsPage() {
     rmse: metric.rmse,
     mae: metric.mae,
   }));
+  const showLoadingStage = loading && inflationSeries.length === 0 && modelMetrics.length === 0;
 
   return (
     <section className="relative mx-auto max-w-screen-2xl px-4 pb-10 sm:px-6 lg:px-8">
-      {loading ? <LoadingStage label="A comparar modelos" detail="A reunir previsões, resíduos e desempenho." /> : null}
+      {showLoadingStage ? <LoadingStage label="A comparar modelos" detail="A reunir previsões, resíduos e desempenho." /> : null}
       <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <p className="text-sm uppercase tracking-[0.3em] text-slate-500">Modelos</p>

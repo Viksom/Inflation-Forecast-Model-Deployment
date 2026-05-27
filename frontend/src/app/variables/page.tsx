@@ -98,18 +98,10 @@ export default function VariablesPage() {
         });
     };
 
-    const handleVisibility = () => {
-      if (document.visibilityState === 'visible') load();
-    };
-
     load();
-    window.addEventListener('focus', load);
-    document.addEventListener('visibilitychange', handleVisibility);
 
     return () => {
       cancelled = true;
-      window.removeEventListener('focus', load);
-      document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, [selectedModel]);
 
@@ -154,10 +146,11 @@ export default function VariablesPage() {
     () => getAxisDomain(comparisonChartData.map((point) => point.target)),
     [comparisonChartData],
   );
+  const showLoadingStage = loading && macroVariables.length === 0 && !targetVariable;
 
   return (
     <section className="relative mx-auto max-w-screen-2xl px-4 pb-10 sm:px-6 lg:px-8">
-      {loading ? <LoadingStage label="A abrir o explorador" detail="A carregar variáveis, correlações e defasagens." /> : null}
+      {showLoadingStage ? <LoadingStage label="A abrir o explorador" detail="A carregar variáveis, correlações e defasagens." /> : null}
       <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <p className="text-sm uppercase tracking-[0.3em] text-slate-500">Variáveis</p>
